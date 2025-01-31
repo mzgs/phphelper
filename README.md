@@ -7,8 +7,10 @@ A comprehensive PHP helper library providing various utility functions for commo
 You can install the package via composer:
 
 ```bash
-composer require mzgs/phphelper
+composer require mzgs/phphelper:dev-main
 ```
+
+Note: Until a stable release is tagged, please use `dev-main` version.
 
 ## Features Overview
 
