@@ -1,5 +1,5 @@
 {
-    "name": "phphelper/toolkit",
+    "name": "mzgs/phphelper",
     "description": "A comprehensive PHP helper library with database, file, login, and utility helpers",
     "type": "library",
     "require": {

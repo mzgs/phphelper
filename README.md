@@ -7,7 +7,7 @@ A comprehensive PHP helper library providing various utility functions for commo
 You can install the package via composer:
 
 ```bash
-composer require phphelper/toolkit
+composer require mzgs/phphelper
 ```
 
 ## Features Overview
