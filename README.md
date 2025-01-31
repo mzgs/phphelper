@@ -206,6 +206,14 @@ $chunks = ArrayHelper::chunk($array, 2);
 $random = ArrayHelper::random($array, 2);
 $shuffled = ArrayHelper::shuffle($array);
 $unique = ArrayHelper::unique($array, 'id');
+
+// Get first/last elements
+$first = ArrayHelper::first($array);
+$last = ArrayHelper::last($array);
+
+// With conditions
+$firstAdmin = ArrayHelper::first($users, fn($user) => $user['role'] === 'admin');
+$lastActive = ArrayHelper::last($users, fn($user) => $user['active'] === true);
 ```
 
 ### General Helper

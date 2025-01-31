@@ -175,4 +175,28 @@ class ArrayHelperTest extends TestCase
         $this->assertCount(count($array), $shuffled);
         $this->assertEquals([], array_diff($array, $shuffled));
     }
+
+    public function testFirst(): void
+    {
+        $array = [1, 2, 3, 4, 5];
+        $this->assertEquals(1, ArrayHelper::first($array));
+        $this->assertNull(ArrayHelper::first([]));
+
+        $result = ArrayHelper::first($array, fn($value) => $value > 3);
+        $this->assertEquals(4, $result);
+
+        $this->assertNull(ArrayHelper::first($array, fn($value) => $value > 5));
+    }
+
+    public function testLast(): void
+    {
+        $array = [1, 2, 3, 4, 5];
+        $this->assertEquals(5, ArrayHelper::last($array));
+        $this->assertNull(ArrayHelper::last([]));
+
+        $result = ArrayHelper::last($array, fn($value) => $value < 3);
+        $this->assertEquals(2, $result);
+
+        $this->assertNull(ArrayHelper::last($array, fn($value) => $value > 5));
+    }
 }
