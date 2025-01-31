@@ -181,11 +181,7 @@ class ArrayHelperTest extends TestCase
         $array = [1, 2, 3, 4, 5];
         $this->assertEquals(1, ArrayHelper::first($array));
         $this->assertNull(ArrayHelper::first([]));
-
-        $result = ArrayHelper::first($array, fn($value) => $value > 3);
-        $this->assertEquals(4, $result);
-
-        $this->assertNull(ArrayHelper::first($array, fn($value) => $value > 5));
+        $this->assertEquals('default', ArrayHelper::first([], 'default'));
     }
 
     public function testLast(): void
@@ -193,10 +189,40 @@ class ArrayHelperTest extends TestCase
         $array = [1, 2, 3, 4, 5];
         $this->assertEquals(5, ArrayHelper::last($array));
         $this->assertNull(ArrayHelper::last([]));
+        $this->assertEquals('default', ArrayHelper::last([], 'default'));
+    }
 
-        $result = ArrayHelper::last($array, fn($value) => $value < 3);
-        $this->assertEquals(2, $result);
+    public function testWhereFirst(): void
+    {
+        $array = [
+            ['id' => 1, 'active' => true],
+            ['id' => 2, 'active' => false],
+            ['id' => 3, 'active' => true],
+        ];
 
-        $this->assertNull(ArrayHelper::last($array, fn($value) => $value > 5));
+        $result = ArrayHelper::whereFirst($array, 'active', true);
+        $this->assertEquals(['id' => 1, 'active' => true], $result);
+
+        $result = ArrayHelper::whereFirst($array, 'id', 2, '>');
+        $this->assertEquals(['id' => 3, 'active' => true], $result);
+
+        $this->assertNull(ArrayHelper::whereFirst($array, 'id', 5, '>'));
+    }
+
+    public function testWhereLast(): void
+    {
+        $array = [
+            ['id' => 1, 'active' => true],
+            ['id' => 2, 'active' => false],
+            ['id' => 3, 'active' => true],
+        ];
+
+        $result = ArrayHelper::whereLast($array, 'active', true);
+        $this->assertEquals(['id' => 3, 'active' => true], $result);
+
+        $result = ArrayHelper::whereLast($array, 'id', 2, '<');
+        $this->assertEquals(['id' => 1, 'active' => true], $result);
+
+        $this->assertNull(ArrayHelper::whereLast($array, 'id', 5, '>'));
     }
 }

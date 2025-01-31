@@ -211,9 +211,14 @@ $unique = ArrayHelper::unique($array, 'id');
 $first = ArrayHelper::first($array);
 $last = ArrayHelper::last($array);
 
-// With conditions
-$firstAdmin = ArrayHelper::first($users, fn($user) => $user['role'] === 'admin');
-$lastActive = ArrayHelper::last($users, fn($user) => $user['active'] === true);
+// Get first/last elements with default values
+$first = ArrayHelper::first($array);           // First element or null
+$last = ArrayHelper::last($array, 'default');  // Last element or 'default'
+
+// Get first/last elements matching conditions
+$firstAdmin = ArrayHelper::whereFirst($users, 'role', 'admin');
+$lastActive = ArrayHelper::whereLast($users, 'active', true);
+$olderThan20 = ArrayHelper::whereFirst($users, 'age', 20, '>');
 ```
 
 ### General Helper

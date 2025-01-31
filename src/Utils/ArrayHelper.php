@@ -230,28 +230,26 @@ class ArrayHelper
         return $array;
     }
 
-    public static function first(array $array, ?callable $callback = null): mixed
+    public static function first(array $array, mixed $default = null): mixed
     {
-        if ($callback === null) {
-            return empty($array) ? null : reset($array);
-        }
-
-        foreach ($array as $key => $value) {
-            if ($callback($value, $key)) {
-                return $value;
-            }
-        }
-
-        return null;
+        return empty($array) ? $default : reset($array);
     }
 
-    public static function last(array $array, ?callable $callback = null): mixed
+    public static function last(array $array, mixed $default = null): mixed
     {
-        if ($callback === null) {
-            return empty($array) ? null : end($array);
-        }
+        return empty($array) ? $default : end($array);
+    }
 
-        return self::first(array_reverse($array, true), $callback);
+    public static function whereFirst(array $array, string $key, mixed $value, string $operator = '='): mixed
+    {
+        $result = self::where($array, $key, $value, $operator);
+        return empty($result) ? null : reset($result);
+    }
+
+    public static function whereLast(array $array, string $key, mixed $value, string $operator = '='): mixed
+    {
+        $result = self::where($array, $key, $value, $operator);
+        return empty($result) ? null : end($result);
     }
 
     public static function unique(array $array, ?string $key = null): array
