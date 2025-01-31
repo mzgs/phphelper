@@ -188,17 +188,28 @@ ArrayHelper::remove($array, 'user.profile.name');
 $only = ArrayHelper::only($array, ['id', 'name']);
 $except = ArrayHelper::except($array, ['password']);
 
-// Collection operations
+// Collection operations with simple keys
 $users = [
     ['id' => 1, 'name' => 'John', 'role' => 'admin'],
     ['id' => 2, 'name' => 'Jane', 'role' => 'user'],
     ['id' => 3, 'name' => 'Bob', 'role' => 'user']
 ];
 
-$names = ArrayHelper::pluck($users, 'name');
-$grouped = ArrayHelper::groupBy($users, 'role');
-$keyedById = ArrayHelper::keyBy($users, 'id');
-$admins = ArrayHelper::where($users, 'role', 'admin');
+$names = ArrayHelper::pluck($users, 'name');         // ['John', 'Jane', 'Bob']
+$grouped = ArrayHelper::groupBy($users, 'role');     // ['admin' => [...], 'user' => [...]]
+$keyedById = ArrayHelper::keyBy($users, 'id');       // [1 => [...], 2 => [...], 3 => [...]]
+$unique = ArrayHelper::unique($users, 'role');       // Unique by role
+
+// Collection operations with dot notation for nested arrays
+$nested = [
+    ['user' => ['profile' => ['name' => 'John', 'role' => 'admin']]],
+    ['user' => ['profile' => ['name' => 'Jane', 'role' => 'user']]],
+];
+
+$names = ArrayHelper::pluck($nested, 'user.profile.name');         // Get nested names
+$byRole = ArrayHelper::groupBy($nested, 'user.profile.role');      // Group by nested role
+$keyedByName = ArrayHelper::keyBy($nested, 'user.profile.name');   // Key by nested name
+$uniqueRoles = ArrayHelper::unique($nested, 'user.profile.role');  // Unique by nested role
 
 // Array utilities
 $flat = ArrayHelper::flatten([1, [2, 3, [4, 5]], 6]);
@@ -219,6 +230,16 @@ $last = ArrayHelper::last($array, 'default');  // Last element or 'default'
 $firstAdmin = ArrayHelper::whereFirst($users, 'role', 'admin');
 $lastActive = ArrayHelper::whereLast($users, 'active', true);
 $olderThan20 = ArrayHelper::whereFirst($users, 'age', 20, '>');
+
+// Using dot notation for nested array properties
+$data = [
+    ['user' => ['profile' => ['age' => 25, 'role' => 'admin']]],
+    ['user' => ['profile' => ['age' => 30, 'role' => 'user']]],
+];
+
+$admins = ArrayHelper::where($data, 'user.profile.role', 'admin');
+$firstYoung = ArrayHelper::whereFirst($data, 'user.profile.age', 30, '<');
+$lastAdmin = ArrayHelper::whereLast($data, 'user.profile.role', 'admin');
 ```
 
 ### General Helper

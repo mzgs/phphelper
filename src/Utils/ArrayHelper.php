@@ -95,10 +95,10 @@ class ArrayHelper
                 continue;
             }
 
-            $value = is_object($item) ? $item->{$key} : $item[$key];
+            $value = strpos($key, '.') !== false ? self::get($item, $key) : (is_object($item) ? $item->{$key} : $item[$key]);
 
             if ($keyBy !== null) {
-                $keyValue          = is_object($item) ? $item->{$keyBy} : $item[$keyBy];
+                $keyValue          = strpos($keyBy, '.') !== false ? self::get($item, $keyBy) : (is_object($item) ? $item->{$keyBy} : $item[$keyBy]);
                 $result[$keyValue] = $value;
             } else {
                 $result[] = $value;
@@ -117,13 +117,15 @@ class ArrayHelper
                 continue;
             }
 
-            $value = is_object($item) ? $item->{$key} : $item[$key];
+            $value = strpos($key, '.') !== false ? self::get($item, $key) : (is_object($item) ? $item->{$key} : $item[$key]);
 
-            if (!isset($result[$value])) {
-                $result[$value] = [];
+            if ($value !== null) {
+                if (!isset($result[$value])) {
+                    $result[$value] = [];
+                }
+
+                $result[$value][] = $item;
             }
-
-            $result[$value][] = $item;
         }
 
         return $result;
@@ -138,8 +140,10 @@ class ArrayHelper
                 continue;
             }
 
-            $value          = is_object($item) ? $item->{$key} : $item[$key];
-            $result[$value] = $item;
+            $value = strpos($key, '.') !== false ? self::get($item, $key) : (is_object($item) ? $item->{$key} : $item[$key]);
+            if ($value !== null) {
+                $result[$value] = $item;
+            }
         }
 
         return $result;
@@ -153,7 +157,11 @@ class ArrayHelper
                 return false;
             }
 
-            $itemValue = is_object($item) ? $item->{$key} : $item[$key];
+            if (strpos($key, '.') !== false) {
+                $itemValue = self::get($item, $key);
+            } else {
+                $itemValue = is_object($item) ? $item->{$key} : $item[$key];
+            }
 
             switch ($operator) {
                 case '=':
@@ -265,7 +273,7 @@ class ArrayHelper
                 return false;
             }
 
-            $value = is_object($item) ? $item->{$key} : $item[$key];
+            $value = strpos($key, '.') !== false ? self::get($item, $key) : (is_object($item) ? $item->{$key} : $item[$key]);
 
             if (in_array($value, $seen)) {
                 return false;

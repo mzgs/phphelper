@@ -92,6 +92,17 @@ class ArrayHelperTest extends TestCase
 
         $namesById = ArrayHelper::pluck($array, 'name', 'id');
         $this->assertEquals([1 => 'John', 2 => 'Jane'], $namesById);
+
+        // Test with dot notation
+        $nested = [
+            ['user' => ['profile' => ['name' => 'John', 'id' => 1]]],
+            ['user' => ['profile' => ['name' => 'Jane', 'id' => 2]]],
+        ];
+        $names  = ArrayHelper::pluck($nested, 'user.profile.name');
+        $this->assertEquals(['John', 'Jane'], $names);
+
+        $byProfileId = ArrayHelper::pluck($nested, 'user.profile.name', 'user.profile.id');
+        $this->assertEquals([1 => 'John', 2 => 'Jane'], $byProfileId);
     }
 
     public function testGroupBy(): void
@@ -107,6 +118,18 @@ class ArrayHelperTest extends TestCase
         $this->assertCount(2, $result);
         $this->assertCount(2, $result['A']);
         $this->assertCount(1, $result['B']);
+
+        // Test with dot notation
+        $nested = [
+            ['user' => ['profile' => ['type' => 'premium', 'name' => 'John']]],
+            ['user' => ['profile' => ['type' => 'basic', 'name' => 'Jane']]],
+            ['user' => ['profile' => ['type' => 'premium', 'name' => 'Bob']]],
+        ];
+
+        $result = ArrayHelper::groupBy($nested, 'user.profile.type');
+        $this->assertCount(2, $result);
+        $this->assertCount(2, $result['premium']);
+        $this->assertCount(1, $result['basic']);
     }
 
     public function testWhere(): void
@@ -122,6 +145,16 @@ class ArrayHelperTest extends TestCase
 
         $result = ArrayHelper::where($array, 'id', 2, '>');
         $this->assertCount(1, $result);
+
+        // Test with dot notation
+        $nestedArray = [
+            ['user' => ['profile' => ['age' => 25]]],
+            ['user' => ['profile' => ['age' => 30]]],
+            ['user' => ['profile' => ['age' => 20]]],
+        ];
+
+        $result = ArrayHelper::where($nestedArray, 'user.profile.age', 25, '>=');
+        $this->assertCount(2, $result);
     }
 
     public function testFlatten(): void
@@ -154,6 +187,42 @@ class ArrayHelperTest extends TestCase
 
         $result = ArrayHelper::unique($array, 'name');
         $this->assertCount(2, $result);
+
+        // Test with dot notation
+        $nested = [
+            ['user' => ['profile' => ['role' => 'admin']]],
+            ['user' => ['profile' => ['role' => 'user']]],
+            ['user' => ['profile' => ['role' => 'admin']]],
+        ];
+
+        $result = ArrayHelper::unique($nested, 'user.profile.role');
+        $this->assertCount(2, $result);
+    }
+
+    public function testKeyBy(): void
+    {
+        $array = [
+            ['id' => 1, 'name' => 'John'],
+            ['id' => 2, 'name' => 'Jane'],
+        ];
+
+        $result = ArrayHelper::keyBy($array, 'id');
+        $this->assertEquals([
+            1 => ['id' => 1, 'name' => 'John'],
+            2 => ['id' => 2, 'name' => 'Jane'],
+        ], $result);
+
+        // Test with dot notation
+        $nested = [
+            ['user' => ['profile' => ['uuid' => 'abc', 'name' => 'John']]],
+            ['user' => ['profile' => ['uuid' => 'xyz', 'name' => 'Jane']]],
+        ];
+
+        $result = ArrayHelper::keyBy($nested, 'user.profile.uuid');
+        $this->assertEquals([
+            'abc' => ['user' => ['profile' => ['uuid' => 'abc', 'name' => 'John']]],
+            'xyz' => ['user' => ['profile' => ['uuid' => 'xyz', 'name' => 'Jane']]],
+        ], $result);
     }
 
     public function testRandom(): void
@@ -207,6 +276,16 @@ class ArrayHelperTest extends TestCase
         $this->assertEquals(['id' => 3, 'active' => true], $result);
 
         $this->assertNull(ArrayHelper::whereFirst($array, 'id', 5, '>'));
+
+        // Test with dot notation
+        $nestedArray = [
+            ['user' => ['profile' => ['active' => true]]],
+            ['user' => ['profile' => ['active' => false]]],
+            ['user' => ['profile' => ['active' => true]]],
+        ];
+
+        $result = ArrayHelper::whereFirst($nestedArray, 'user.profile.active', true);
+        $this->assertEquals(['user' => ['profile' => ['active' => true]]], $result);
     }
 
     public function testWhereLast(): void
@@ -224,5 +303,15 @@ class ArrayHelperTest extends TestCase
         $this->assertEquals(['id' => 1, 'active' => true], $result);
 
         $this->assertNull(ArrayHelper::whereLast($array, 'id', 5, '>'));
+
+        // Test with dot notation
+        $nestedArray = [
+            ['user' => ['profile' => ['role' => 'admin']]],
+            ['user' => ['profile' => ['role' => 'user']]],
+            ['user' => ['profile' => ['role' => 'admin']]],
+        ];
+
+        $result = ArrayHelper::whereLast($nestedArray, 'user.profile.role', 'admin');
+        $this->assertEquals(['user' => ['profile' => ['role' => 'admin']]], $result);
     }
 }
