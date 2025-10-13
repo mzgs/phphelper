@@ -91,6 +91,8 @@ final class DBTest extends TestCase
         $this->assertSame($afterCommit, $afterRollback);
     }
 
+    
+
     public function testQuoteIdentifierProducesDriverSpecificQuotes(): void
     {
         // SQLite uses double quotes
