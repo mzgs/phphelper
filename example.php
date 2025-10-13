@@ -11,3 +11,4 @@ echo DB::count("users", "age >= ?", [30]) . PHP_EOL;
 
 echo Str::upper("Başlık türkçe isim çöğş","tr") . PHP_EOL;
 echo Str::lower("BAŞLIK TÜRKÇE İSİM ÇÖĞŞ","tr") . PHP_EOL;
+echo Str::title("BAŞLIK TÜRKÇE İSİM ÇÖĞŞ","tr") . PHP_EOL;

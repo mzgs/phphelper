@@ -128,7 +128,12 @@ final class StrTest extends TestCase
         $this->assertSame($upperI . 'stanbul', Str::title('istanbul', 'tr'));
         $this->assertSame('Irmak', Str::title(strtoupper($lowerDotlessI . 'rmak'), 'tr'));
 
-      
+        $turkishSentenceLower = 'başlık türkçe isim çöğş';
+        $turkishSentenceUpper = 'BAŞLIK TÜRKÇE İSİM ÇÖĞŞ';
+
+        $this->assertSame($turkishSentenceUpper, Str::upper('Başlık türkçe isim çöğş', 'tr'));
+        $this->assertSame($turkishSentenceLower, Str::lower($turkishSentenceUpper, 'tr'));
+        $this->assertSame('Başlık Türkçe İsim Çöğş', Str::title($turkishSentenceUpper, 'tr'));
     }
 
     public function testLimitCharacters(): void
