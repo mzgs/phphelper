@@ -131,6 +131,62 @@ class Str
     }
 
     /**
+     * Convert a string to lowercase, supporting locale-specific rules when possible.
+     */
+    public static function lower(string $value, ?string $lang = null): string
+    {
+        if ($value === '') {
+            return '';
+        }
+
+        $transliterated = self::transliterateCase($value, 'lower', $lang);
+        return $transliterated ?? self::defaultLower($value);
+    }
+
+    /**
+     * Convert a string to uppercase, supporting locale-specific rules when possible.
+     */
+    public static function upper(string $value, ?string $lang = null): string
+    {
+        if ($value === '') {
+            return '';
+        }
+
+        $transliterated = self::transliterateCase($value, 'upper', $lang);
+        return $transliterated ?? self::defaultUpper($value);
+    }
+
+    /**
+     * Convert a string to Title Case, preserving locale-sensitive characters when possible.
+     */
+    public static function title(string $value, ?string $lang = null): string
+    {
+        if ($value === '') {
+            return '';
+        }
+
+        $transliterated = self::transliterateCase($value, 'title', $lang);
+        if (is_string($transliterated)) {
+            return $transliterated;
+        }
+
+        $lowered = self::lower($value, $lang);
+
+        $titled = preg_replace_callback('/\pL+/u', function (array $match) use ($lang) {
+            $word = $match[0];
+            $first = self::unicodeSubstr($word, 0, 1);
+            $rest = self::unicodeSubstr($word, 1);
+
+            $firstUpper = self::upper($first, $lang);
+            $restLower = $rest === '' ? '' : self::lower($rest, $lang);
+
+            return $firstUpper . $restLower;
+        }, $lowered);
+
+        return is_string($titled) ? $titled : $lowered;
+    }
+
+    /**
      * Limit the number of characters in a string.
      */
     public static function limit(string $value, int $limit = 100, string $end = '...'): string
@@ -372,5 +428,79 @@ class Str
             return '';
         }
         return preg_replace('/\s+/u', ' ', $trimmed) ?? $trimmed;
+    }
+
+    private static function defaultLower(string $value): string
+    {
+        return function_exists('mb_strtolower')
+            ? mb_strtolower($value, 'UTF-8')
+            : strtolower($value);
+    }
+
+    private static function defaultUpper(string $value): string
+    {
+        return function_exists('mb_strtoupper')
+            ? mb_strtoupper($value, 'UTF-8')
+            : strtoupper($value);
+    }
+
+    private static function unicodeSubstr(string $value, int $start, ?int $length = null): string
+    {
+        if (function_exists('mb_substr')) {
+            return $length === null
+                ? mb_substr($value, $start, null, 'UTF-8')
+                : mb_substr($value, $start, $length, 'UTF-8');
+        }
+
+        return $length === null ? substr($value, $start) : substr($value, $start, $length);
+    }
+
+    private static function transliterateCase(string $value, string $mode, ?string $lang): ?string
+    {
+        if (!class_exists(\Transliterator::class)) {
+            return null;
+        }
+
+        $mode = strtolower($mode);
+        $candidates = [];
+
+        $localeId = self::normalizeLocaleForTransliterator($lang);
+        if ($localeId !== null) {
+            $candidates[] = $localeId . '-' . $mode;
+            $candidates[] = $localeId . '_' . $mode;
+        }
+
+        $candidates[] = 'any-' . $mode;
+
+        foreach ($candidates as $id) {
+            $transliterator = @\Transliterator::create($id);
+            if ($transliterator instanceof \Transliterator) {
+                $result = $transliterator->transliterate($value);
+                if (is_string($result)) {
+                    return $result;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static function normalizeLocaleForTransliterator(?string $lang): ?string
+    {
+        if ($lang === null) {
+            return null;
+        }
+
+        $lang = trim($lang);
+        if ($lang === '') {
+            return null;
+        }
+
+        $lang = str_replace(['@', '#'], '', $lang);
+        $lang = str_replace('-', '_', $lang);
+        $lang = strtolower($lang);
+        $parts = explode('_', $lang);
+
+        return $parts[0] !== '' ? $parts[0] : null;
     }
 }

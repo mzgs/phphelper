@@ -114,6 +114,23 @@ final class StrTest extends TestCase
         $this->assertSame('FooBarBaz', Str::studly('foo bar-baz'));
     }
 
+    public function testLowerUpperTitleWithOptionalLocale(): void
+    {
+        $this->assertSame('hello world', Str::lower('Hello World'));
+        $this->assertSame('HELLO WORLD', Str::upper('hello world'));
+        $this->assertSame('Hello World', Str::title('hello world'));
+
+        $upperI = 'İ';
+        $lowerDotlessI = 'ı';
+
+        $this->assertSame('istanbul', Str::lower($upperI . 'STANBUL', 'tr'));
+        $this->assertSame($upperI . 'STANBUL', Str::upper('istanbul', 'tr'));
+        $this->assertSame($upperI . 'stanbul', Str::title('istanbul', 'tr'));
+        $this->assertSame('Irmak', Str::title(strtoupper($lowerDotlessI . 'rmak'), 'tr'));
+
+      
+    }
+
     public function testLimitCharacters(): void
     {
         $this->assertSame('abc...', Str::limit('abcdef', 3));
