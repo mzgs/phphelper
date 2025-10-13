@@ -46,6 +46,19 @@ composer require mzgs/phphelper:dev-main
 
   // DSN-based
   DB::connect('mysql:host=127.0.0.1;port=3306;dbname=app;charset=utf8mb4', 'username', 'password');
+
+  // Helper builders (host/user/password are optional)
+  DB::mysql('app', 'username', 'password', [
+      'host' => '127.0.0.1',
+      'attributes' => [PDO::ATTR_TIMEOUT => 3],
+  ]);
+
+  DB::pgsql('app', 'postgres', 'secret', [
+      'host' => 'db',
+      'sslmode' => 'require',
+  ]);
+
+  DB::sqlite(__DIR__ . '/storage/database.sqlite');
   ```
 
 ## Transactions

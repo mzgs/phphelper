@@ -24,6 +24,140 @@ class DB
             throw new RuntimeException('DB connection failed: ' . $e->getMessage(), (int) $e->getCode(), $e);
         }
     }
+
+    /**
+     * Connect to a MySQL or MariaDB database using common defaults.
+     *
+     * @param array{
+     *     host?: string,
+     *     port?: int|string|null,
+     *     charset?: ?string,
+     *     unix_socket?: ?string,
+     *     attributes?: array<int|string, mixed>
+     * } $options
+     */
+    public static function mysql(string $dbname, ?string $username = null, ?string $password = null, array $options = []): void
+    {
+        $dsnParts = ['mysql:dbname=' . $dbname];
+
+        $unixSocket = $options['unix_socket'] ?? null;
+        if ($unixSocket !== null) {
+            if (!is_string($unixSocket)) {
+                throw new \InvalidArgumentException('The "unix_socket" option must be a string or null.');
+            }
+            $dsnParts[] = 'unix_socket=' . $unixSocket;
+        } else {
+            $host = $options['host'] ?? '127.0.0.1';
+            if (!is_string($host)) {
+                throw new \InvalidArgumentException('The "host" option must be a string.');
+            }
+            $dsnParts[] = 'host=' . $host;
+
+            if (array_key_exists('port', $options) && $options['port'] !== null) {
+                if (!is_int($options['port']) && !is_string($options['port'])) {
+                    throw new \InvalidArgumentException('The "port" option must be an int, string, or null.');
+                }
+                $dsnParts[] = 'port=' . $options['port'];
+            }
+        }
+
+        $charset = $options['charset'] ?? 'utf8mb4';
+        if ($charset !== null && $charset !== '') {
+            if (!is_string($charset)) {
+                throw new \InvalidArgumentException('The "charset" option must be a string or null.');
+            }
+            $dsnParts[] = 'charset=' . $charset;
+        }
+
+        $attributes = self::pdoAttributes($options);
+
+        self::connect(implode(';', $dsnParts), $username, $password, $attributes);
+    }
+
+    /**
+     * Connect to a PostgreSQL database.
+     *
+     * @param array{
+     *     host?: string,
+     *     port?: int|string|null,
+     *     sslmode?: ?string,
+     *     charset?: ?string,
+     *     application_name?: ?string,
+     *     attributes?: array<int|string, mixed>
+     * } $options
+     */
+    public static function pgsql(string $dbname, ?string $username = null, ?string $password = null, array $options = []): void
+    {
+        $dsnParts = ['pgsql:dbname=' . $dbname];
+
+        $host = $options['host'] ?? '127.0.0.1';
+        if (!is_string($host)) {
+            throw new \InvalidArgumentException('The "host" option must be a string.');
+        }
+        $dsnParts[] = 'host=' . $host;
+
+        if (array_key_exists('port', $options) && $options['port'] !== null) {
+            if (!is_int($options['port']) && !is_string($options['port'])) {
+                throw new \InvalidArgumentException('The "port" option must be an int, string, or null.');
+            }
+            $dsnParts[] = 'port=' . $options['port'];
+        }
+
+        if (array_key_exists('sslmode', $options) && $options['sslmode'] !== null) {
+            if (!is_string($options['sslmode'])) {
+                throw new \InvalidArgumentException('The "sslmode" option must be a string or null.');
+            }
+            $dsnParts[] = 'sslmode=' . $options['sslmode'];
+        }
+
+        if (array_key_exists('charset', $options) && $options['charset'] !== null) {
+            if (!is_string($options['charset'])) {
+                throw new \InvalidArgumentException('The "charset" option must be a string or null.');
+            }
+            $dsnParts[] = 'options=--client_encoding=' . $options['charset'];
+        }
+
+        if (array_key_exists('application_name', $options) && $options['application_name'] !== null) {
+            if (!is_string($options['application_name'])) {
+                throw new \InvalidArgumentException('The "application_name" option must be a string or null.');
+            }
+            $dsnParts[] = 'application_name=' . $options['application_name'];
+        }
+
+        $attributes = self::pdoAttributes($options);
+
+        self::connect(implode(';', $dsnParts), $username, $password, $attributes);
+    }
+
+    /**
+     * Connect to a SQLite database (file or in-memory).
+     *
+     * @param array{
+     *     memory?: bool,
+     *     attributes?: array<int|string, mixed>
+     * } $options
+     */
+    public static function sqlite(string $pathOrDsn = ':memory:', ?string $username = null, ?string $password = null, array $options = []): void
+    {
+        $dsn = 'sqlite:';
+
+        $memory = $options['memory'] ?? null;
+        if ($memory !== null && !is_bool($memory)) {
+            throw new \InvalidArgumentException('The "memory" option must be a bool or null.');
+        }
+
+        if ($memory === true) {
+            $dsn .= ':memory:';
+        } elseif ($pathOrDsn === ':memory:') {
+            $dsn .= ':memory:';
+        } else {
+            $dsn .= $pathOrDsn;
+        }
+
+        $attributes = self::pdoAttributes($options);
+
+        self::connect($dsn, $username, $password, $attributes);
+    }
  
     /**
      * Determine if a connection is active.
@@ -61,6 +195,27 @@ class DB
         if (is_bool($value)) return $value;
         $str = strtolower((string) $value);
         return in_array($str, ['1', 'true', 'yes', 'on'], true);
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     */
+    protected static function pdoAttributes(array $options): array
+    {
+        if (!array_key_exists('attributes', $options)) {
+            return [];
+        }
+
+        $attributes = $options['attributes'];
+        if ($attributes === null) {
+            return [];
+        }
+
+        if (!is_array($attributes)) {
+            throw new \InvalidArgumentException('The "attributes" option must be an array of PDO attributes.');
+        }
+
+        return $attributes;
     }
 
     /**
