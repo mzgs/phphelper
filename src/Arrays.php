@@ -305,11 +305,7 @@ class Arrays
      */
     public static function isAssoc(array $array): bool
     {
-        if ([] === $array) {
-            return false;
-        }
-
-        return array_keys($array) !== range(0, count($array) - 1);
+        return !array_is_list($array);
     }
 
     /**
@@ -317,7 +313,7 @@ class Arrays
      */
     public static function isSequential(array $array): bool
     {
-        return !self::isAssoc($array);
+        return array_is_list($array);
     }
 
     /**
