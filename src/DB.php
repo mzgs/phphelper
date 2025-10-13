@@ -278,6 +278,23 @@ class DB
     }
 
     /**
+     * Count rows in a table with an optional WHERE clause.
+     *
+     * @param array<string, mixed>|list<mixed> $params
+     */
+    public static function count(string $table, string $where = '', array $params = []): int
+    {
+        $sql = 'SELECT COUNT(*) FROM ' . self::quoteIdentifier($table);
+        $where = trim($where);
+        if ($where !== '') {
+            $sql .= ' WHERE ' . $where;
+        }
+
+        $value = self::getValue($sql, $params);
+        return (int) ($value ?? 0);
+    }
+
+    /**
      * Insert a row and return last insert id (string as per PDO contract).
      *
      * @param array<string, mixed> $data

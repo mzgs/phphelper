@@ -55,26 +55,26 @@ final class DBTest extends TestCase
         $updated = DB::update('users', ['age' => 37], 'name = :n', ['n' => 'Ada']);
         $this->assertSame(1, $updated);
 
-        $count = DB::getValue('SELECT COUNT(*) FROM users WHERE age >= ?', [40]);
-        $this->assertSame('1', (string) $count);
+        $count = DB::count('users', 'age >= ?', [40]);
+        $this->assertSame(1, $count);
 
         $deleted = DB::delete('users', 'name = :n', ['n' => 'Grace']);
         $this->assertSame(1, $deleted);
 
-        $remaining = DB::getValue('SELECT COUNT(*) FROM users');
-        $this->assertSame('1', (string) $remaining);
+        $remaining = DB::count('users');
+        $this->assertSame(1, $remaining);
     }
 
     public function testTransactionCommitAndRollback(): void
     {
-        $start = (int) DB::getValue('SELECT COUNT(*) FROM users');
+        $start = DB::count('users');
 
         DB::transaction(function (): void {
             DB::insert('users', ['name' => 'Linus', 'age' => 30]);
             DB::insert('users', ['name' => 'Margaret', 'age' => 28]);
         });
 
-        $afterCommit = (int) DB::getValue('SELECT COUNT(*) FROM users');
+        $afterCommit = DB::count('users');
         $this->assertSame($start + 2, $afterCommit);
 
         try {
@@ -87,7 +87,7 @@ final class DBTest extends TestCase
             $this->assertSame('fail', $e->getMessage());
         }
 
-        $afterRollback = (int) DB::getValue('SELECT COUNT(*) FROM users');
+        $afterRollback = DB::count('users');
         $this->assertSame($afterCommit, $afterRollback);
     }
 

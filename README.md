@@ -31,7 +31,7 @@ composer require mzgs/phphelper:dev-main
 
   $id = DB::insert('items', ['name' => 'example']);
   $row = DB::getRow('SELECT * FROM items WHERE id = :id', ['id' => $id]);
-  $total = DB::getValue('SELECT COUNT(*) FROM items');
+  $total = DB::count('items');
 
   // Transactions (atomic group of operations)
   DB::transaction(function () {
