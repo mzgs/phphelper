@@ -41,12 +41,12 @@ final class DBTest extends TestCase
         $this->assertNotSame('', $id1);
         $this->assertNotSame('', $id2);
 
-        $row = DB::fetch('SELECT * FROM users WHERE id = :id', ['id' => $id1]);
+        $row = DB::getRow('SELECT * FROM users WHERE id = :id', ['id' => $id1]);
         $this->assertNotNull($row);
         $this->assertSame('Ada', $row['name']);
         $this->assertSame(36, (int) $row['age']);
 
-        $all = DB::fetchAll('SELECT name FROM users ORDER BY id ASC');
+        $all = DB::getRows('SELECT name FROM users ORDER BY id ASC');
         $this->assertSame([
             ['name' => 'Ada'],
             ['name' => 'Grace'],
@@ -55,26 +55,26 @@ final class DBTest extends TestCase
         $updated = DB::update('users', ['age' => 37], 'name = :n', ['n' => 'Ada']);
         $this->assertSame(1, $updated);
 
-        $count = DB::scalar('SELECT COUNT(*) FROM users WHERE age >= ?', [40]);
+        $count = DB::getValue('SELECT COUNT(*) FROM users WHERE age >= ?', [40]);
         $this->assertSame('1', (string) $count);
 
         $deleted = DB::delete('users', 'name = :n', ['n' => 'Grace']);
         $this->assertSame(1, $deleted);
 
-        $remaining = DB::scalar('SELECT COUNT(*) FROM users');
+        $remaining = DB::getValue('SELECT COUNT(*) FROM users');
         $this->assertSame('1', (string) $remaining);
     }
 
     public function testTransactionCommitAndRollback(): void
     {
-        $start = (int) DB::scalar('SELECT COUNT(*) FROM users');
+        $start = (int) DB::getValue('SELECT COUNT(*) FROM users');
 
         DB::transaction(function (): void {
             DB::insert('users', ['name' => 'Linus', 'age' => 30]);
             DB::insert('users', ['name' => 'Margaret', 'age' => 28]);
         });
 
-        $afterCommit = (int) DB::scalar('SELECT COUNT(*) FROM users');
+        $afterCommit = (int) DB::getValue('SELECT COUNT(*) FROM users');
         $this->assertSame($start + 2, $afterCommit);
 
         try {
@@ -87,7 +87,7 @@ final class DBTest extends TestCase
             $this->assertSame('fail', $e->getMessage());
         }
 
-        $afterRollback = (int) DB::scalar('SELECT COUNT(*) FROM users');
+        $afterRollback = (int) DB::getValue('SELECT COUNT(*) FROM users');
         $this->assertSame($afterCommit, $afterRollback);
     }
 

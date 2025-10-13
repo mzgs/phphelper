@@ -246,7 +246,7 @@ class DB
      * @param array<string, mixed>|list<mixed> $params
      * @return array<string, mixed>|null
      */
-    public static function fetch(string $sql, array $params = []): ?array
+    public static function getRow(string $sql, array $params = []): ?array
     {
         $row = self::query($sql, $params)->fetch();
         return $row === false ? null : $row;
@@ -258,7 +258,7 @@ class DB
      * @param array<string, mixed>|list<mixed> $params
      * @return list<array<string, mixed>>
      */
-    public static function fetchAll(string $sql, array $params = []): array
+    public static function getRows(string $sql, array $params = []): array
     {
         /** @var list<array<string, mixed>> $all */
         $all = self::query($sql, $params)->fetchAll();
@@ -270,7 +270,7 @@ class DB
      *
      * @param array<string, mixed>|list<mixed> $params
      */
-    public static function scalar(string $sql, array $params = []): mixed
+    public static function getValue(string $sql, array $params = []): mixed
     {
         $stmt = self::query($sql, $params);
         $value = $stmt->fetchColumn(0);

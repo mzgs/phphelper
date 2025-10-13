@@ -30,7 +30,8 @@ composer require mzgs/phphelper:dev-main
   DB::execute('CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)');
 
   $id = DB::insert('items', ['name' => 'example']);
-  $row = DB::fetch('SELECT * FROM items WHERE id = :id', ['id' => $id]);
+  $row = DB::getRow('SELECT * FROM items WHERE id = :id', ['id' => $id]);
+  $total = DB::getValue('SELECT COUNT(*) FROM items');
 
   // Transactions (atomic group of operations)
   DB::transaction(function () {
