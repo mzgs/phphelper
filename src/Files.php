@@ -231,7 +231,7 @@ class Files
     /**
      * Read CSV file
      */
-    public static function readCsv(string $path, string $delimiter = ',', string $enclosure = '"'): array|false
+    public static function readCsv(string $path, string $delimiter = ',', string $enclosure = '"', string $escape = '\\'): array|false
     {
         if (!self::exists($path)) {
             return false;
@@ -239,7 +239,7 @@ class Files
 
         $data = [];
         if (($handle = fopen($path, 'r')) !== false) {
-            while (($row = fgetcsv($handle, 0, $delimiter, $enclosure)) !== false) {
+            while (($row = fgetcsv($handle, 0, $delimiter, $enclosure, $escape)) !== false) {
                 $data[] = $row;
             }
             fclose($handle);
@@ -251,7 +251,7 @@ class Files
     /**
      * Write CSV file
      */
-    public static function writeCsv(string $path, array $data, string $delimiter = ',', string $enclosure = '"'): bool
+    public static function writeCsv(string $path, array $data, string $delimiter = ',', string $enclosure = '"', string $escape = '\\'): bool
     {
         $handle = fopen($path, 'w');
         if ($handle === false) {
@@ -259,7 +259,7 @@ class Files
         }
 
         foreach ($data as $row) {
-            fputcsv($handle, $row, $delimiter, $enclosure);
+            fputcsv($handle, $row, $delimiter, $enclosure, $escape);
         }
 
         fclose($handle);

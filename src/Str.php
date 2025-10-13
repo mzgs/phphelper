@@ -226,4 +226,151 @@ class Str
         }
         return $trim ? trim($text) === '' : $text === '';
     }
+
+    /**
+     * Get the part of the string before the first occurrence of search.
+     */
+    public static function before(string $text, string $search, bool $caseSensitive = true): string
+    {
+        if ($search === '') {
+            return $text;
+        }
+
+        $pos = $caseSensitive ? strpos($text, $search) : stripos($text, $search);
+        if ($pos === false) {
+            return $text;
+        }
+
+        return substr($text, 0, $pos);
+    }
+
+    /**
+     * Get the part of the string after the first occurrence of search.
+     */
+    public static function after(string $text, string $search, bool $caseSensitive = true): string
+    {
+        if ($search === '') {
+            return $text;
+        }
+
+        $pos = $caseSensitive ? strpos($text, $search) : stripos($text, $search);
+        if ($pos === false) {
+            return $text;
+        }
+
+        return substr($text, $pos + strlen($search));
+    }
+
+    /**
+     * Get the substring between two delimiters. Returns null if not found.
+     */
+    public static function between(string $text, string $from, string $to, bool $caseSensitive = true): ?string
+    {
+        if ($from === '' || $to === '') {
+            return null;
+        }
+
+        $start = $caseSensitive ? strpos($text, $from) : stripos($text, $from);
+        if ($start === false) {
+            return null;
+        }
+
+        $startPos = $start + strlen($from);
+        $end = $caseSensitive ? strpos($text, $to, $startPos) : stripos($text, $to, $startPos);
+        if ($end === false || $end < $startPos) {
+            return null;
+        }
+
+        return substr($text, $startPos, $end - $startPos);
+    }
+
+    /**
+     * Replace the first occurrence of a substring.
+     */
+    public static function replaceFirst(string $text, string $search, string $replace, bool $caseSensitive = true): string
+    {
+        if ($search === '') {
+            return $text;
+        }
+
+        $pos = $caseSensitive ? strpos($text, $search) : stripos($text, $search);
+        if ($pos === false) {
+            return $text;
+        }
+
+        return substr($text, 0, $pos) . $replace . substr($text, $pos + strlen($search));
+    }
+
+    /**
+     * Replace the last occurrence of a substring.
+     */
+    public static function replaceLast(string $text, string $search, string $replace, bool $caseSensitive = true): string
+    {
+        if ($search === '') {
+            return $text;
+        }
+
+        $pos = $caseSensitive ? strrpos($text, $search) : strripos($text, $search);
+        if ($pos === false) {
+            return $text;
+        }
+
+        return substr($text, 0, $pos) . $replace . substr($text, $pos + strlen($search));
+    }
+
+    /**
+     * Determine if the string contains all given fragments.
+     */
+    public static function containsAll(string $text, array $needles, bool $caseSensitive = true): bool
+    {
+        foreach ($needles as $needle) {
+            if ($needle === '') {
+                continue;
+            }
+            if ($caseSensitive) {
+                if (!str_contains($text, $needle)) {
+                    return false;
+                }
+            } else {
+                if (stripos($text, $needle) === false) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Ensure the string starts with the given prefix.
+     */
+    public static function ensurePrefix(string $text, string $prefix, bool $caseSensitive = true): string
+    {
+        if ($prefix === '' || self::startsWith($text, $prefix, $caseSensitive)) {
+            return $text;
+        }
+        return $prefix . $text;
+    }
+
+    /**
+     * Ensure the string ends with the given suffix.
+     */
+    public static function ensureSuffix(string $text, string $suffix, bool $caseSensitive = true): string
+    {
+        if ($suffix === '' || self::endsWith($text, $suffix, $caseSensitive)) {
+            return $text;
+        }
+        return $text . $suffix;
+    }
+
+    /**
+     * Collapse all whitespace into single spaces and trim the string.
+     */
+    public static function squish(string $text): string
+    {
+        $trimmed = trim($text);
+        if ($trimmed === '') {
+            return '';
+        }
+        return preg_replace('/\s+/u', ' ', $trimmed) ?? $trimmed;
+    }
 }

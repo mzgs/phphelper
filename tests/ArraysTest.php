@@ -7,6 +7,90 @@ require_once __DIR__ . '/../src/Arrays.php';
 
 final class ArraysTest extends TestCase
 {
+    public function testGetSetAndHasEdgeCases(): void
+    {
+        $data = ['a' => 1];
+        // set should overwrite intermediate scalar with array
+        Arrays::set($data, 'a.b', 2);
+        $this->assertSame(['a' => ['b' => 2]], $data);
+
+        // get should return default when drilling into non-array
+        $this->assertSame('def', Arrays::get(['a' => 1], 'a.b', 'def'));
+
+        // get should fetch empty-string key directly
+        $this->assertSame(42, Arrays::get(['' => 42], ''));
+
+        // has should be false when drilling into non-array
+        $this->assertFalse(Arrays::has(['a' => 1], 'a.b'));
+    }
+
+    public function testOnlyAndExceptWithEmptyKeys(): void
+    {
+        $data = ['id' => 1, 'name' => 'Ada'];
+        $this->assertSame([], Arrays::only($data, []));
+        $this->assertSame($data, Arrays::except($data, []));
+    }
+
+    public function testFirstAndLastEdgeCases(): void
+    {
+        $empty = [];
+        $this->assertSame('d', Arrays::first($empty, null, 'd'));
+        $this->assertSame('f', Arrays::last($empty, null, 'f'));
+
+        $numbers = [1, 3, 5];
+        $this->assertSame('x', Arrays::first($numbers, fn ($v) => $v % 2 === 0, 'x'));
+        $this->assertSame('y', Arrays::last($numbers, fn ($v) => $v % 2 === 0, 'y'));
+    }
+
+    public function testWrapAndShuffleWithEmptyArray(): void
+    {
+        $this->assertSame([], Arrays::wrap([]));
+        $this->assertSame([], Arrays::shuffle([]));
+    }
+
+    public function testChunkPreservesKeysWhenRequested(): void
+    {
+        $assoc = ['a' => 1, 'b' => 2];
+        $chunks = Arrays::chunk($assoc, 1, true);
+        $this->assertSame([['a' => 1], ['b' => 2]], $chunks);
+    }
+
+    public function testCrossJoinWithEmptyArguments(): void
+    {
+        $this->assertSame([[]], Arrays::crossJoin());
+        $this->assertSame([], Arrays::crossJoin([]));
+    }
+
+    public function testDivideAndDuplicatesOnEmpty(): void
+    {
+        [$keys, $values] = Arrays::divide([]);
+        $this->assertSame([], $keys);
+        $this->assertSame([], $values);
+        $this->assertSame([], Arrays::duplicates([]));
+    }
+
+    public function testToQueryAndFromQueryOnEmpty(): void
+    {
+        $this->assertSame('', Arrays::toQuery([]));
+        $this->assertSame([], Arrays::fromQuery(''));
+    }
+
+    public function testKeyBySkipsNullKeysAndGroupByHandlesNull(): void
+    {
+        $items = [
+            ['id' => null, 'name' => 'a'],
+            ['id' => 2, 'name' => 'b'],
+        ];
+
+        $keyed = Arrays::keyBy($items, fn ($i) => $i['id']);
+        $this->assertArrayNotHasKey('', $keyed); // null should be skipped
+        $this->assertArrayHasKey(2, $keyed);
+
+        $grouped = Arrays::groupBy($items, fn ($i) => $i['id']);
+        $this->assertArrayHasKey('', $grouped); // null groups under empty-string key
+        $this->assertCount(1, $grouped['']);
+        $this->assertCount(1, $grouped[2]);
+    }
     public function testGetReturnsNestedValueAndFallsBackToDefault(): void
     {
         $data = [

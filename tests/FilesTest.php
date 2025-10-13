@@ -280,4 +280,59 @@ final class FilesTest extends TestCase
 
         $this->assertSame($expected, $joined);
     }
+
+    public function testSizeFormattedForEmptyFile(): void
+    {
+        $file = $this->createFile('empty.txt', '');
+
+        $this->assertSame(0, Files::size($file));
+        $this->assertSame('0 B', Files::sizeFormatted($file));
+    }
+
+    public function testExtensionWithoutDot(): void
+    {
+        $this->assertSame('', Files::extension('noextension'));
+    }
+
+    public function testCopyOnMissingSourceReturnsFalse(): void
+    {
+        $this->assertFalse(Files::copy($this->path('missing.txt'), $this->path('copy/nowhere.txt')));
+    }
+
+    public function testReadJsonInvalidReturnsNull(): void
+    {
+        $path = $this->path('invalid.json');
+        Files::write($path, '{invalid json');
+        $this->assertNull(Files::readJson($path));
+    }
+
+    public function testWriteAndReadCsvWithEmptyData(): void
+    {
+        $path = $this->path('empty.csv');
+        $this->assertTrue(Files::writeCsv($path, []));
+        $this->assertSame([], Files::readCsv($path));
+    }
+
+    public function testHashWithInvalidAlgorithmThrowsValueError(): void
+    {
+        $file = $this->createFile('data.bin', 'x');
+        $this->expectException(ValueError::class);
+        Files::hash($file, 'nope-algo');
+    }
+
+    public function testListFilesPatternNoMatch(): void
+    {
+        $this->createFile('a.txt');
+        $this->assertSame([], Files::listFiles($this->testDir, '*.log'));
+    }
+
+    public function testReadWriteLargeContent(): void
+    {
+        $content = str_repeat('A', 256 * 1024); // 256KB
+        $path = $this->path('large.txt');
+        Files::write($path, $content);
+
+        $this->assertSame(strlen($content), Files::size($path));
+        $this->assertSame($content, Files::read($path));
+    }
 }
