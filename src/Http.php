@@ -37,6 +37,19 @@ class Http
         exit();
     }
 
+    public static function json(mixed $data, int $status = 200, array $headers = []): void
+    {
+        if (!headers_sent()) {
+            http_response_code($status);
+            header('Content-Type: application/json; charset=utf-8');
+            foreach ($headers as $k => $v) {
+                header($k . ': ' . $v, true);
+            }
+        }
+        echo class_exists('Format') ? Format::json($data) : json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit();
+    }
+
     /**
      * Collect best-effort client information (IP, UA, browser, OS, device, language, request).
      *
