@@ -1,12 +1,19 @@
 <?php
 require_once __DIR__ . '/../src/PrettyErrorHandler.php';
 require_once __DIR__ . '/../src/DB.php';
+require_once __DIR__ . '/../src/AuthManager.php';
 PrettyErrorHandler::enable();
 
-DB::mysql('test_db', 'root', '1');  
+DB::mysql('phphelper', 'root', '1');  
 
-DB::getRow('SELECT * FROM users');
+// DB::getRow('SELECT * FROM users');
 
+AuthManager::configure([
+    "mysql" => [
+        'pdo' => DB::pdo()
+    ],
+]);
+AuthManager::createUsersTable()
  
 
 ?>

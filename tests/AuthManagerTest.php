@@ -4,6 +4,7 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/../src/AuthManager.php';
+require_once __DIR__ . '/../src/DB.php';
 
 final class AuthManagerTest extends TestCase
 {
@@ -17,6 +18,8 @@ final class AuthManagerTest extends TestCase
         }
 
         $_SESSION = [];
+
+        AuthManager::setPdo(null);
 
         AuthManager::configure([
             'session_key' => 'auth_user',
@@ -160,5 +163,204 @@ final class AuthManagerTest extends TestCase
         $this->assertSame('custom:SECRET', $hash);
         $this->assertTrue(AuthManager::verify('secret', $hash));
         $this->assertFalse(AuthManager::verify('other', $hash));
+    }
+
+    public function testMysqlOptionUsesDatabaseProviderAndPersister(): void
+    {
+        if (!in_array('sqlite', PDO::getAvailableDrivers(), true)) {
+            $this->markTestSkipped('pdo_sqlite not available');
+        }
+
+        DB::connect('sqlite::memory:');
+
+        try {
+            DB::execute('CREATE TABLE users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT NOT NULL,
+                password_hash TEXT NOT NULL,
+                name TEXT NOT NULL,
+                active INTEGER NOT NULL DEFAULT 1
+            )');
+
+            $activeHash = password_hash('secret', PASSWORD_DEFAULT);
+            $inactiveHash = password_hash('hidden', PASSWORD_DEFAULT);
+
+            DB::insert('users', [
+                'email' => 'jane@example.com',
+                'password_hash' => $activeHash,
+                'name' => 'Jane',
+                'active' => 1,
+            ]);
+
+            DB::insert('users', [
+                'email' => 'inactive@example.com',
+                'password_hash' => $inactiveHash,
+                'name' => 'Inactive',
+                'active' => 0,
+            ]);
+
+            AuthManager::configure([
+                'mysql' => [
+                    'table' => 'users',
+                    'password_field' => 'password_hash',
+                    'columns' => ['id', 'email', 'password_hash', 'name', 'active'],
+                    'credential_map' => ['username' => 'email'],
+                    'conditions' => ['active' => 1],
+                ],
+            ]);
+
+            $this->assertTrue(AuthManager::attempt([
+                'username' => 'jane@example.com',
+                'password' => 'secret',
+            ]));
+
+            $user = AuthManager::user();
+            $this->assertIsArray($user);
+            $this->assertSame('jane@example.com', $user['email']);
+            $this->assertSame('Jane', $user['name']);
+            $this->assertSame(1, $user['active']);
+            $this->assertArrayNotHasKey('password_hash', $user);
+
+            AuthManager::logout();
+
+            $this->assertFalse(AuthManager::attempt([
+                'username' => 'inactive@example.com',
+                'password' => 'hidden',
+            ]));
+
+            $registered = AuthManager::register([
+                'email' => 'new@example.com',
+                'password_hash' => 'topsecret',
+                'name' => 'New User',
+                'active' => 1,
+            ], true);
+
+            $this->assertIsArray($registered);
+            $this->assertArrayHasKey('id', $registered);
+            $this->assertSame('new@example.com', $registered['email']);
+            $this->assertSame('New User', $registered['name']);
+            $this->assertTrue(AuthManager::check());
+
+            $stored = DB::getRow('SELECT * FROM users WHERE email = :email', ['email' => 'new@example.com']);
+            $this->assertNotNull($stored);
+            $this->assertTrue(AuthManager::verify('topsecret', $stored['password_hash'] ?? ''));
+
+            AuthManager::logout();
+        } finally {
+            if (DB::connected()) {
+                DB::disconnect();
+            }
+            AuthManager::setPdo(null);
+        }
+    }
+
+    public function testMysqlOptionDefaultsAllowMinimalConfiguration(): void
+    {
+        if (!in_array('sqlite', PDO::getAvailableDrivers(), true)) {
+            $this->markTestSkipped('pdo_sqlite not available');
+        }
+
+        DB::connect('sqlite::memory:');
+
+        try {
+            AuthManager::configure([
+                'mysql' => [
+                    'pdo' => DB::pdo(),
+                ],
+            ]);
+
+            AuthManager::createUsersTable();
+
+            $registered = AuthManager::register([
+                'email' => 'minimal@example.com',
+                'password' => 'secret123',
+            ], true);
+
+            $this->assertTrue(AuthManager::check());
+            $this->assertSame('minimal@example.com', $registered['email']);
+            $this->assertArrayNotHasKey('password', $registered);
+
+            AuthManager::logout();
+
+            $this->assertTrue(AuthManager::attempt([
+                'email' => 'minimal@example.com',
+                'password' => 'secret123',
+            ]));
+
+            $user = AuthManager::user();
+            $this->assertIsArray($user);
+            $this->assertSame('minimal@example.com', $user['email']);
+        } finally {
+            if (DB::connected()) {
+                DB::disconnect();
+            }
+            AuthManager::setPdo(null);
+        }
+    }
+
+    public function testCreateUsersTableCreatesExpectedSchema(): void
+    {
+        if (!in_array('sqlite', PDO::getAvailableDrivers(), true)) {
+            $this->markTestSkipped('pdo_sqlite not available');
+        }
+
+        DB::connect('sqlite::memory:');
+
+        try {
+            AuthManager::createUsersTable([
+                'table' => 'auth_users',
+                'password_field' => 'password_hash',
+                'extra_columns' => [
+                    'status INTEGER NOT NULL DEFAULT 1',
+                ],
+            ]);
+
+            $info = DB::getRows('PRAGMA table_info(auth_users)');
+            $this->assertNotEmpty($info);
+
+            $names = array_map(static fn (array $col): string => (string) $col['name'], $info);
+            $this->assertContains('id', $names);
+            $this->assertContains('email', $names);
+            $this->assertContains('password_hash', $names);
+            $this->assertContains('name', $names);
+            $this->assertContains('status', $names);
+            $this->assertContains('created_at', $names);
+            $this->assertContains('updated_at', $names);
+
+            $idMeta = null;
+            foreach ($info as $column) {
+                if (($column['name'] ?? null) === 'id') {
+                    $idMeta = $column;
+                    break;
+                }
+            }
+
+            $this->assertNotNull($idMeta);
+            $this->assertSame(1, (int) ($idMeta['pk'] ?? 0));
+
+            DB::insert('auth_users', [
+                'email' => 'unique@example.com',
+                'password_hash' => 'hash-one',
+                'name' => 'Unique',
+                'status' => 1,
+            ]);
+
+            try {
+                DB::insert('auth_users', [
+                    'email' => 'unique@example.com',
+                    'password_hash' => 'hash-two',
+                    'name' => 'Duplicate',
+                    'status' => 1,
+                ]);
+                $this->fail('Expected unique constraint violation for email column.');
+            } catch (\PDOException $e) {
+                $this->assertStringContainsStringIgnoringCase('unique', (string) $e->getMessage());
+            }
+        } finally {
+            if (DB::connected()) {
+                DB::disconnect();
+            }
+            AuthManager::setPdo(null);
+        }
     }
 }

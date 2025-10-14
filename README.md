@@ -154,6 +154,39 @@ composer require mzgs/phphelper:dev-main
   $newUser = AuthManager::register(['email' => 'new@example.com', 'password' => 'strong'], true);
   ```
 
+  MySQL-backed provider/persister (requires the `DB` helper):
+
+  ```php
+  require_once 'src/DB.php';
+
+  DB::connect('sqlite::memory:'); // or DB::mysql('app', 'user', 'pass');
+  AuthManager::createUsersTable([
+      'table' => 'users',
+      'password_field' => 'password_hash',
+      'extra_columns' => ['active' => 'INTEGER DEFAULT 1'],
+  ]); // idempotent helper (requires DB::connected())
+
+  AuthManager::configure([
+      'mysql' => [
+          'pdo' => DB::pdo(), // only requirement; table defaults to "users"
+      ],
+  ]);
+
+  // Optional: customise behaviour
+  AuthManager::configure([
+      'mysql' => [
+          'pdo' => DB::pdo(),
+          'table' => 'users',
+          'password_field' => 'password_hash',
+          'columns' => ['id', 'email', 'password_hash', 'name', 'active'],
+          'credential_map' => ['username' => 'email'], // map attempt key -> column
+          'conditions' => ['active' => 1],             // appended to WHERE clause
+      ],
+  ]);
+
+  AuthManager::attempt(['username' => 'user@example.com', 'password' => 'secret']);
+  ```
+
 ## Error Handler
 
 Capture PHP errors/exceptions and render a pretty error page (HTML in web, plaintext in CLI) with file, line, and code snippet highlighting.
