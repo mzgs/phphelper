@@ -120,6 +120,32 @@ composer require mzgs/phphelper:dev-main
   // host, port, path, query, url
   ```
 
+## Error Handler
+
+Capture PHP errors/exceptions and render a pretty error page (HTML in web, plaintext in CLI) with file, line, and code snippet highlighting.
+
+Usage (place as early as possible in your entry script):
+
+```php
+require_once 'src/ErrorHandler.php';
+
+// Registers global handlers immediately
+new ErrorHandler([
+    // optional settings (defaults shown)
+    'display' => true,          // force display_errors on
+    'report' => E_ALL,          // error_reporting level
+    'context_before' => 6,      // lines before the error line
+    'context_after' => 4,       // lines after the error line
+    'show_trace' => true,       // include stack trace
+]);
+
+// Or via static helper
+// ErrorHandler::enable();
+
+// Trigger an error to see output (example):
+// echo $undefinedVar; // Notice with highlighted snippet
+```
+
 ## Transactions
 
 `DB::transaction(callable $callback): mixed` wraps your operations in a database transaction. It starts a transaction if none is active, commits on success, and rolls back on exceptions. The method returns whatever your callback returns.
