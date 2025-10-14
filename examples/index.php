@@ -1,8 +1,11 @@
 <?php
 require_once __DIR__ . '/../src/ErrorHandler.php';
+require_once __DIR__ . '/../src/DB.php';
 ErrorHandler::enable();
 
-echo $sdsdc;
+DB::mysql('test_db', 'roots', '1');
+
+
 ?>
 <!doctype html>
 <html lang="en">
