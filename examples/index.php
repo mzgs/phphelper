@@ -1,12 +1,13 @@
 <?php
-require_once __DIR__ . '/../src/ErrorHandler.php';
+require_once __DIR__ . '/../src/PrettyErrorHandler.php';
 require_once __DIR__ . '/../src/DB.php';
-ErrorHandler::enable();
+PrettyErrorHandler::enable();
 
 DB::mysql('test_db', 'root', '1');  
 
-DB::getRow('SELECT * FROM userssd');
+DB::getRow('SELECT * FROM users');
 
+ 
 
 ?>
 <!doctype html>

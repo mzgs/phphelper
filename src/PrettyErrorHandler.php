@@ -1,6 +1,6 @@
 <?php
 
-class ErrorHandler
+class PrettyErrorHandler
 {
     /** @var array<string,mixed> */
     private array $options;
@@ -14,6 +14,7 @@ class ErrorHandler
      *  - context (int): lines of context around error line (default 6 before, 4 after)
      *  - show_trace (bool): include backtrace (default true)
      *  - overlay (bool): render as overlay instead of full page (default true)
+     *  - skip_warnings (bool): bypass handler output for PHP warnings (default false)
      */
     public function __construct(array $options = [], bool $registerGlobal = true)
     {
@@ -25,6 +26,7 @@ class ErrorHandler
             'show_trace' => true,
             // Render as an on-page overlay instead of a full page
             'overlay' => true,
+            'skip_warnings' => false,
         ];
 
         if ($registerGlobal) {
@@ -54,6 +56,10 @@ class ErrorHandler
         set_error_handler(function (int $severity, string $message, string $file = 'unknown', int $line = 0): bool {
             // Respect @-operator
             if (!(error_reporting() & $severity)) {
+                return false;
+            }
+
+            if (!empty($this->options['skip_warnings']) && $this->isWarning($severity)) {
                 return false;
             }
 
@@ -92,6 +98,11 @@ class ErrorHandler
     private function isFatal(int $type): bool
     {
         return in_array($type, [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true);
+    }
+
+    private function isWarning(int $type): bool
+    {
+        return in_array($type, [E_WARNING, E_CORE_WARNING, E_COMPILE_WARNING, E_USER_WARNING], true);
     }
 
     private function errorLevelToString(int $severity): string
@@ -261,7 +272,7 @@ class ErrorHandler
             . '.eh-button{appearance:none;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.18);color:#fff;font-size:13px;line-height:1;border-radius:6px;padding:8px 12px;cursor:pointer;} '
             . '.eh-button:hover{background:rgba(255,255,255,.12);} '
             . '.eh-close{font-size:22px;padding:2px 8px;line-height:1;border:0;background:#0000;} '
-            . '.eh-copy{display:flex;align-items:center;justify-content:center;gap:6px;font-weight:500;width:140px;white-space:nowrap;} '
+            . '.eh-copy{display:flex;align-items:center;justify-content:center;gap:6px;font-weight:500;width:120px;white-space:nowrap;} '
             . '.eh-copy svg{width:16px;height:16px;fill:currentColor;} '
             . '.eh-meta{padding:12px 20px;border-bottom:1px solid #30363d;color:#8b949e;font-size:13px;} '
             . '.eh-code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,\"Liberation Mono\",\"Courier New\",monospace;font-size:13px;padding:8px 0;} '

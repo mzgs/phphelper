@@ -127,10 +127,10 @@ Capture PHP errors/exceptions and render a pretty error page (HTML in web, plain
 Usage (place as early as possible in your entry script):
 
 ```php
-require_once 'src/ErrorHandler.php';
+require_once 'src/PrettyErrorHandler.php';
 
 // Registers global handlers immediately
-new ErrorHandler([
+new PrettyErrorHandler([
     // optional settings (defaults shown)
     'display' => true,          // force display_errors on
     'report' => E_ALL,          // error_reporting level
@@ -138,10 +138,11 @@ new ErrorHandler([
     'context_after' => 4,       // lines after the error line
     'show_trace' => true,       // include stack trace
     'overlay' => true,          // render as dismissible overlay (set false for full page)
+    'skip_warnings' => false,   // bypass handler for PHP warnings
 ]);
 
 // Or via static helper
-// ErrorHandler::enable();
+// PrettyErrorHandler::enable();
 
 // Trigger an error to see output (example):
 // echo $undefinedVar; // Notice with highlighted snippet
