@@ -92,18 +92,7 @@ class Files
         return filesize($path);
     }
 
-    /**
-     * Get file size formatted as human-readable string
-     */
-    public static function sizeFormatted(string $path): string|false
-    {
-        $bytes = self::size($path);
-        if ($bytes === false) {
-            return false;
-        }
-
-        return Format::bytes($bytes, 2, 'binary');
-    }
+    
 
     /**
      * Get file extension

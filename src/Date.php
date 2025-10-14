@@ -44,7 +44,8 @@ class Date
             return 'just now';
         }
 
-        $suffix = $interval->invert ? ' from now' : ' ago';
+        // invert === 1 means the compared time is in the past relative to now
+        $suffix = $interval->invert ? ' ago' : ' from now';
 
         if ($full && count($parts) > 1) {
             $last = array_pop($parts);

@@ -123,15 +123,13 @@ final class FilesTest extends TestCase
         $this->assertFalse(Files::exists($this->path('missing.txt')));
     }
 
-    public function testSizeAndFormattedSize(): void
+    public function testSize(): void
     {
         $content = str_repeat('a', 2048);
         $file = $this->createFile('size.txt', $content);
 
         $this->assertSame(2048, Files::size($file));
-        $this->assertSame('2 KB', Files::sizeFormatted($file));
         $this->assertFalse(Files::size($this->path('missing.txt')));
-        $this->assertFalse(Files::sizeFormatted($this->path('missing.txt')));
     }
 
     public function testExtensionReturnsLowercaseExtension(): void
@@ -281,12 +279,11 @@ final class FilesTest extends TestCase
         $this->assertSame($expected, $joined);
     }
 
-    public function testSizeFormattedForEmptyFile(): void
+    public function testSizeForEmptyFile(): void
     {
         $file = $this->createFile('empty.txt', '');
 
         $this->assertSame(0, Files::size($file));
-        $this->assertSame('0 B', Files::sizeFormatted($file));
     }
 
     public function testExtensionWithoutDot(): void
