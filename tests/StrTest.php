@@ -255,6 +255,52 @@ final class StrTest extends TestCase
         $this->assertMatchesRegularExpression('/^caf-?e$/', Str::slug('café'));
     }
 
+    public function testSeoFileNameNormalizesAndKeepsExtensions(): void
+    {
+        $result = Str::seoFileName('Café résumé.txt');
+
+        $this->assertSame(strtolower($result), $result, 'Result must be lowercase');
+        $this->assertStringEndsWith('.txt', $result);
+        $this->assertMatchesRegularExpression('/^[a-z0-9.-]+$/', $result);
+        $this->assertMatchesRegularExpression('/^c/', $result);
+    }
+
+    public function testSeoFileNameTrimsPunctuationAndSpaces(): void
+    {
+        $this->assertSame('my-file', Str::seoFileName('  ..My file..  '));
+    }
+
+    public function testSeoFileNameFallsBackWhenTransliterationFails(): void
+    {
+        $this->assertSame('', Str::seoFileName("\xff"));
+    }
+
+    public function testSeoFileNameHandlesTurkishCharacters(): void
+    {
+        $this->assertSame('istanbul-calisma.pdf', Str::seoFileName('İstanbul Çalışma.PDF'));
+    }
+
+    public function testSeoFileNameTransformsDottedCapitalI(): void
+    {
+        $this->assertSame('dosya-icerik.png', Str::seoFileName('Dosya İÇerik.PnG'));
+    }
+
+    public function testSeoUrlStripsDotsAndDelegatesToSeoFileName(): void
+    {
+        $this->assertSame('pictureprofile-v12', Str::seoUrl('Picture.profile v1.2'));
+        $this->assertSame('', Str::seoUrl('...---'));
+    }
+
+    public function testSeoUrlHandlesTurkishCharactersAndMixedCase(): void
+    {
+        $this->assertSame('istanbulproje-v1ozel', Str::seoUrl('İstanbul.Proje V1.ÖZEL'));
+    }
+
+    public function testSeoUrlTransformsDottedCapitalI(): void
+    {
+        $this->assertSame('iyi-haberler', Str::seoUrl('İyi Haberler'));
+    }
+
     public function testUuid4GeneratesUniqueValues(): void
     {
         $u1 = Str::uuid4();

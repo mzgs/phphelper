@@ -503,4 +503,44 @@ class Str
 
         return $parts[0] !== '' ? $parts[0] : null;
     }
+
+   static function seoFileName($text)
+    {
+        $normalized = $text;
+        $hasTransliteration = false;
+
+        if (class_exists('Transliterator')) {
+            $transliterator = Transliterator::createFromRules(':: Any-Latin; :: Latin-ASCII; :: NFD; :: [:Nonspacing Mark:] Remove; :: Lower(); :: NFC;', Transliterator::FORWARD);
+            if ($transliterator instanceof Transliterator) {
+                $result = $transliterator->transliterate($text);
+                if (is_string($result)) {
+                    $normalized = $result;
+                    $hasTransliteration = true;
+                }
+            }
+        }
+
+        if (!$hasTransliteration) {
+            $fallback = function_exists('iconv')
+                ? iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text)
+                : $text;
+            if (!is_string($fallback)) {
+                $fallback = $text;
+            }
+            $normalized = strtolower($fallback);
+        }
+
+        // Keep the dot (.) and word characters, replace other characters
+        $normalized = preg_replace("/[^ \w\.]+/", "", $normalized);
+        $normalized = str_replace(" ", "-", $normalized);
+        // trim - and .
+        $normalized = trim((string) $normalized, "-.");
+
+        return $normalized;
+    }
+
+    static function seoUrl($text)
+        {
+        return self::seoFileName(str_replace('.', '', $text));
+    }
 }
