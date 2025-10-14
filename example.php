@@ -5,6 +5,7 @@
 require_once __DIR__ . '/src/DB.php';
 require_once __DIR__ . '/src/Str.php';
 require_once __DIR__ . '/src/Format.php';
+require_once __DIR__ . '/src/Http.php';
 
 // Small helpers for tidy output
 function longLine(int $length = 64, string $char = '-'): void
@@ -79,4 +80,10 @@ line('parseBytes("2MiB"): ', Format::parseBytes('2MiB'));                   // 2
 line('bool(true): ', Format::bool(true));                                     // Yes
 line('bool("no"): ', Format::bool('no'));                                    // No
 
- 
+echo "<br>";
+echo "<br>";
+echo "<br>";
+
+echo "<pre>";
+print_r(Http::clientInfo());
+echo "</pre>";

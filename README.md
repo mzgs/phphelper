@@ -100,6 +100,26 @@ composer require mzgs/phphelper:dev-main
   $ts3 = Dates::timestamp(1735820645);
   ```
 
+- HTTP helpers are in `Http`:
+
+  ```php
+  require_once 'src/Http.php';
+
+  // Redirect
+  // Http::redirect('/login');
+
+  // File download
+  // Http::download('/path/to/report.csv', 'text/csv');
+
+  // Client info (best-effort)
+  $info = Http::clientInfo();
+  // Example keys:
+  // ip, ips, is_proxy, user_agent, browser, browser_version,
+  // os, engine, device, is_mobile, is_tablet, is_desktop, is_bot,
+  // accept_language, languages, accept, referer, method, scheme,
+  // host, port, path, query, url
+  ```
+
 ## Transactions
 
 `DB::transaction(callable $callback): mixed` wraps your operations in a database transaction. It starts a transaction if none is active, commits on success, and rolls back on exceptions. The method returns whatever your callback returns.
