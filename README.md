@@ -62,6 +62,44 @@ composer require mzgs/phphelper:dev-main
   DB::sqlite(__DIR__ . '/storage/database.sqlite');
   ```
 
+- Date helpers are in `Dates`:
+
+  ```php
+  require_once 'src/Date.php';
+
+  // Relative times
+  echo Dates::ago('2024-10-01 12:00:00');          // e.g. "13 days ago"
+  echo Dates::ago(time() + 3600);                  // e.g. "in 1 hour"
+  echo Dates::ago(new DateTimeImmutable('-3 days'), true); // "3 days ago"
+
+  // Easy formatting
+  echo Dates::format('2025-01-02 15:04:05', 'date');             // 2025-01-02
+  echo Dates::format('2025-01-02 15:04:05', 'datetime');         // 2025-01-02 15:04
+  echo Dates::format('2025-01-02 15:04:05', 'datetime_seconds'); // 2025-01-02 15:04:05
+  echo Dates::format('2025-01-02 15:04:05', 'iso');              // 2025-01-02T15:04:05+00:00
+  echo Dates::format('2025-01-02 15:04:05', 'rfc2822');          // Thu, 02 Jan 2025 15:04:05 +0000
+  echo Dates::format('2025-01-02 15:04:05', 'human_full');       // 2 January 2025, 15:04
+
+  // Custom PHP date() pattern and timezone
+  echo Dates::format(time(), 'd/m/Y H:i', 'Europe/Istanbul');
+  ```
+
+  Timestamps:
+
+  ```php
+  // Current timestamp
+  $now = Dates::timestamp();
+
+  // From DateTimeInterface
+  $ts1 = Dates::timestamp(new DateTimeImmutable('2025-01-02 15:04:05'));
+
+  // From string (using optional timezone when string lacks TZ)
+  $ts2 = Dates::timestamp('2025-01-02 15:04:05', 'Europe/Istanbul');
+
+  // From integer (returns as-is)
+  $ts3 = Dates::timestamp(1735820645);
+  ```
+
 ## Transactions
 
 `DB::transaction(callable $callback): mixed` wraps your operations in a database transaction. It starts a transaction if none is active, commits on success, and rolls back on exceptions. The method returns whatever your callback returns.
