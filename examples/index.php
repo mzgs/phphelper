@@ -7,13 +7,7 @@ PrettyErrorHandler::enable();
 DB::mysql('phphelper', 'root', '1');  
 
 // DB::getRow('SELECT * FROM users');
-
-AuthManager::configure([
-    "mysql" => [
-        'pdo' => DB::pdo()
-    ],
-]);
-AuthManager::createUsersTable()
+ 
  
 
 ?>
