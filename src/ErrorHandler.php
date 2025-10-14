@@ -13,6 +13,7 @@ class ErrorHandler
      *  - report (int): error_reporting level (default E_ALL)
      *  - context (int): lines of context around error line (default 6 before, 4 after)
      *  - show_trace (bool): include backtrace (default true)
+     *  - overlay (bool): render as overlay instead of full page (default true)
      */
     public function __construct(array $options = [], bool $registerGlobal = true)
     {
@@ -23,7 +24,7 @@ class ErrorHandler
             'context_after' => 4,
             'show_trace' => true,
             // Render as an on-page overlay instead of a full page
-            'overlay' => false,
+            'overlay' => true,
         ];
 
         if ($registerGlobal) {
@@ -170,14 +171,17 @@ class ErrorHandler
         $type = $e instanceof \ErrorException ? $this->errorLevelToString($e->getSeverity()) : get_class($e);
         $file = $e->getFile();
         $line = $e->getLine();
-        $message = htmlspecialchars($e->getMessage(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $messageRaw = $e->getMessage();
+        $message = htmlspecialchars($messageRaw, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
         $snippet = $this->getCodeSnippet($file, $line, (int)$this->options['context_before'], (int)$this->options['context_after']);
         $traceHtml = $this->options['show_trace'] ? $this->formatTraceHtml($e) : '';
+        $traceText = $this->options['show_trace'] ? $this->formatTraceText($e) : '';
+        $traceSummary = $this->options['show_trace'] ? $this->getTraceSummaryLine($e) : null;
 
         if (!empty($this->options['overlay'])) {
             // Render as an overlay that can sit on top of any existing page content
-            $this->renderHtmlOverlay($type, $message, $file, $line, $snippet, $traceHtml);
+            $this->renderHtmlOverlay($type, $message, $file, $line, $snippet, $traceHtml, $traceText, $traceSummary, $messageRaw);
             return;
         }
 
@@ -232,20 +236,32 @@ class ErrorHandler
      * @param int    $line
      * @param array<int, array{0:int,1:string,2:bool}>|null $snippet
      * @param string $traceHtml (already HTML-escaped markup)
+     * @param string $traceText (plain-text trace)
+     * @param string|null $traceSummary (plain-text single-line summary)
+     * @param string $rawMessage (plain-text error message)
      */
-    private function renderHtmlOverlay(string $type, string $message, string $file, int $line, ?array $snippet, string $traceHtml): void
+    private function renderHtmlOverlay(string $type, string $message, string $file, int $line, ?array $snippet, string $traceHtml, string $traceText, ?string $traceSummary, string $rawMessage): void
     {
         $fileHtml = htmlspecialchars($file, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $lineHtml = (string)(int)$line;
+        $copyText = sprintf('%s: %s in %s:%d', $type, $rawMessage, $file, $line);
+
+        if ($traceSummary !== null && $traceSummary !== '') {
+            $copyText .= ' [' . $traceSummary . ']';
+        }
 
         // Styles scoped with `eh-` prefix to avoid collisions; very high z-index.
         echo '<style id="php-error-overlay-style">'
             . '.eh-overlay{position:fixed;inset:0;display:flex;align-items:flex-start;justify-content:center;padding:32px;z-index:2147483647;background:rgba(10,15,20,.6);backdrop-filter:blur(2px);} '
             . '.eh-modal{width:min(1000px,92vw);margin-top:24px;background:#161b22;border:1px solid #30363d;border-radius:8px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.4);color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Ubuntu,Cantarell,\"Helvetica Neue\",Arial,\"Apple Color Emoji\",\"Segoe UI Emoji\";} '
-            . '.eh-bar{background:#da3633;color:#fff;padding:12px 16px;font-size:16px;font-weight:600;display:flex;align-items:center;gap:12px;justify-content:space-between;} '
+            . '.eh-bar{background:#da3633;color:#fff;padding:12px 16px;font-size:16px;font-weight:600;display:flex;align-items:center;gap:12px;} '
             . '.eh-title{margin-right:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;} '
-            . '.eh-close{appearance:none;border:0;background:#0000;color:#fff;font-size:22px;line-height:1;border-radius:6px;padding:2px 8px;cursor:pointer;} '
-            . '.eh-close:hover{background:rgba(255,255,255,.12);} '
+            . '.eh-actions{display:flex;gap:8px;} '
+            . '.eh-button{appearance:none;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.18);color:#fff;font-size:13px;line-height:1;border-radius:6px;padding:8px 12px;cursor:pointer;} '
+            . '.eh-button:hover{background:rgba(255,255,255,.12);} '
+            . '.eh-close{font-size:22px;padding:2px 8px;line-height:1;border:0;background:#0000;} '
+            . '.eh-copy{display:flex;align-items:center;gap:6px;font-weight:500;} '
+            . '.eh-copy svg{width:16px;height:16px;fill:currentColor;} '
             . '.eh-meta{padding:12px 20px;border-bottom:1px solid #30363d;color:#8b949e;font-size:13px;} '
             . '.eh-code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,\"Liberation Mono\",\"Courier New\",monospace;font-size:13px;padding:8px 0;} '
             . '.eh-code pre{margin:0;white-space:pre;overflow:auto;background:#0b1021;color:#e6edf3;padding:12px 0;} '
@@ -266,7 +282,10 @@ class ErrorHandler
             . '<div class="eh-modal">'
             . '<div class="eh-bar">'
             . '<div class="eh-title" id="php-error-title">' . htmlspecialchars($type, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . ': ' . $message . '</div>'
-            . '<button type="button" class="eh-close" id="php-error-close" aria-label="Close">&times;</button>'
+            . '<div class="eh-actions">'
+            . '<button type="button" class="eh-button eh-copy" id="php-error-copy" aria-label="Copy error"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 18H8V7h11v16z"/></svg>Copy error</button>'
+            . '<button type="button" class="eh-button eh-close" id="php-error-close" aria-label="Close">&times;</button>'
+            . '</div>'
             . '</div>'
             . '<div class="eh-meta">File: ' . $fileHtml . ' &nbsp;•&nbsp; Line: ' . $lineHtml . '</div>'
             . '<div class="eh-code">';
@@ -284,8 +303,9 @@ class ErrorHandler
             echo '<div class="eh-meta eh-small">Source not available</div>';
         }
 
-        echo '</div>' . str_replace(['class="item"'], ['class="eh-item"'], $traceHtml) . '</div></div>'
-            . '<script>(function(){try{var ov=document.getElementById("php-error-overlay");if(!ov)return;var closeBtn=document.getElementById("php-error-close");function close(){if(ov&&ov.parentNode){ov.parentNode.removeChild(ov);}document.removeEventListener("keydown",onKey);}function onKey(e){if(e.key==="Escape"){close();}}if(closeBtn){closeBtn.addEventListener("click",close);}document.addEventListener("keydown",onKey);}catch(e){/* noop */}})();</script>';
+        $script = '<script>(function(){try{var ov=document.getElementById("php-error-overlay");if(!ov)return;var closeBtn=document.getElementById("php-error-close");var modal=document.querySelector("#php-error-overlay .eh-modal");var copyBtn=document.getElementById("php-error-copy");var originalCopyLabel=copyBtn?copyBtn.textContent:"";var copyText=' . json_encode($copyText) . ';function close(){if(ov&&ov.parentNode){ov.parentNode.removeChild(ov);}document.removeEventListener("keydown",onKey);if(ov){ov.removeEventListener("click",onOverlayClick);}}function onKey(e){if(e.key==="Escape"){close();}}function onOverlayClick(e){if(!modal||modal.contains(e.target)){return;}close();}if(closeBtn){closeBtn.addEventListener("click",close);}document.addEventListener("keydown",onKey);if(ov){ov.addEventListener("click",onOverlayClick);}if(copyBtn){copyBtn.addEventListener("click",function(){var reset=function(){copyBtn.textContent=originalCopyLabel;};var markCopied=function(){copyBtn.textContent="Copied!";setTimeout(reset,1500);};var fallback=function(){var textarea=document.createElement("textarea");textarea.value=copyText;textarea.setAttribute("readonly","true");textarea.style.position="fixed";textarea.style.opacity="0";document.body.appendChild(textarea);textarea.select();try{document.execCommand("copy");markCopied();}catch(err){reset();console.error(err);}document.body.removeChild(textarea);};if(window.navigator&&navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(copyText).then(markCopied,function(){fallback();});}else{fallback();}});} }catch(e){/* noop */}})();</script>';
+
+        echo '</div>' . str_replace(['class="item"'], ['class="eh-item"'], $traceHtml) . '</div></div>' . $script;
     }
 
     /**
@@ -326,6 +346,23 @@ class ErrorHandler
             $index++;
         }
         return implode(PHP_EOL, $out);
+    }
+
+    private function getTraceSummaryLine(\Throwable $e): ?string
+    {
+        $trace = $e->getTrace();
+        foreach ($trace as $index => $frame) {
+            $class = $frame['class'] ?? '';
+            if ($class === self::class) {
+                continue;
+            }
+            $func = ($frame['class'] ?? '') . ($frame['type'] ?? '') . ($frame['function'] ?? '');
+            $file = $frame['file'] ?? '[internal]';
+            $line = isset($frame['line']) ? (int)$frame['line'] : '?';
+            return sprintf('#%d %s:%s (%s)', $index, $file, $line, $func);
+        }
+
+        return null;
     }
 
     private function formatTraceHtml(\Throwable $e): string

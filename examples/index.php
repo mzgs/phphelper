@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../src/ErrorHandler.php';
-ErrorHandler::enable(['overlay' => true]);
+ErrorHandler::enable();
 
 echo $sdsdc;
 ?>

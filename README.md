@@ -137,7 +137,7 @@ new ErrorHandler([
     'context_before' => 6,      // lines before the error line
     'context_after' => 4,       // lines after the error line
     'show_trace' => true,       // include stack trace
-    'overlay' => false,         // render as dismissible overlay (true) or full page (false)
+    'overlay' => true,          // render as dismissible overlay (set false for full page)
 ]);
 
 // Or via static helper
