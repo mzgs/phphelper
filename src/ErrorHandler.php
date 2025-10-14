@@ -179,7 +179,7 @@ class ErrorHandler
 
         if (!empty($this->options['overlay'])) {
             // Render as an overlay that can sit on top of any existing page content
-            $this->renderHtmlOverlay($type, $message, $file, $line, $snippet, $traceHtml, $traceText, $traceSummary, $messageRaw);
+            $this->renderHtmlOverlay($e, $type, $message, $file, $line, $snippet, $traceHtml, $traceText, $traceSummary, $messageRaw);
             return;
         }
 
@@ -228,6 +228,7 @@ class ErrorHandler
     /**
      * Render an overlay with a close button instead of a full page.
      *
+     * @param \Throwable $e
      * @param string $type
      * @param string $message (already HTML-escaped)
      * @param string $file
@@ -238,14 +239,16 @@ class ErrorHandler
      * @param string|null $traceSummary (plain-text single-line summary)
      * @param string $rawMessage (plain-text error message)
      */
-    private function renderHtmlOverlay(string $type, string $message, string $file, int $line, ?array $snippet, string $traceHtml, string $traceText, ?string $traceSummary, string $rawMessage): void
+    private function renderHtmlOverlay(\Throwable $e, string $type, string $message, string $file, int $line, ?array $snippet, string $traceHtml, string $traceText, ?string $traceSummary, string $rawMessage): void
     {
         $fileHtml = htmlspecialchars($file, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $lineHtml = (string)(int)$line;
-        $copyText = sprintf('%s: %s in %s:%d', $type, $rawMessage, $file, $line);
+        $copyText = sprintf('%s: %s', $type, $rawMessage);
 
-        if ($traceSummary !== null && $traceSummary !== '') {
-            $copyText .= ' [' . $traceSummary . ']';
+        $copyFrame = $this->resolveCopyFrame($e, $traceSummary, $file, $line);
+
+        if ($copyFrame !== '') {
+            $copyText .= PHP_EOL . $copyFrame;
         }
 
         // Styles scoped with `eh-` prefix to avoid collisions; very high z-index.
@@ -258,7 +261,7 @@ class ErrorHandler
             . '.eh-button{appearance:none;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.18);color:#fff;font-size:13px;line-height:1;border-radius:6px;padding:8px 12px;cursor:pointer;} '
             . '.eh-button:hover{background:rgba(255,255,255,.12);} '
             . '.eh-close{font-size:22px;padding:2px 8px;line-height:1;border:0;background:#0000;} '
-            . '.eh-copy{display:flex;align-items:center;justify-content:center;gap:6px;font-weight:500;width:120px;white-space:nowrap;} '
+            . '.eh-copy{display:flex;align-items:center;justify-content:center;gap:6px;font-weight:500;width:140px;white-space:nowrap;} '
             . '.eh-copy svg{width:16px;height:16px;fill:currentColor;} '
             . '.eh-meta{padding:12px 20px;border-bottom:1px solid #30363d;color:#8b949e;font-size:13px;} '
             . '.eh-code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,\"Liberation Mono\",\"Courier New\",monospace;font-size:13px;padding:8px 0;} '
@@ -349,18 +352,61 @@ class ErrorHandler
     private function getTraceSummaryLine(\Throwable $e): ?string
     {
         $trace = $e->getTrace();
-        foreach ($trace as $index => $frame) {
+        for ($i = count($trace) - 1; $i >= 0; $i--) {
+            $frame = $trace[$i];
             $class = $frame['class'] ?? '';
             if ($class === self::class) {
                 continue;
             }
             $func = ($frame['class'] ?? '') . ($frame['type'] ?? '') . ($frame['function'] ?? '');
             $file = $frame['file'] ?? '[internal]';
-            $line = isset($frame['line']) ? (int)$frame['line'] : '?';
-            return sprintf('#%d %s:%s (%s)', $index, $file, $line, $func);
+            $line = isset($frame['line']) ? (int)$frame['line'] : null;
+            return $this->formatCopyFrame($file, $line, $func);
         }
 
         return null;
+    }
+
+    /**
+     * Determine the frame string to place on the clipboard.
+     */
+    private function resolveCopyFrame(\Throwable $e, ?string $traceSummary, string $fallbackFile, int $fallbackLine): string
+    {
+        if ($traceSummary !== null && $traceSummary !== '') {
+            return $traceSummary;
+        }
+
+        [$displayFile, $displayLine] = $this->resolveDisplayFrame($e);
+
+        $trace = $e->getTrace();
+        for ($i = count($trace) - 1; $i >= 0; $i--) {
+            $frame = $trace[$i];
+            if (!isset($frame['file'], $frame['line'])) {
+                continue;
+            }
+
+            if ((string)$frame['file'] !== $displayFile || (int)$frame['line'] !== $displayLine) {
+                continue;
+            }
+
+            $func = ($frame['class'] ?? '') . ($frame['type'] ?? '') . ($frame['function'] ?? '');
+            return $this->formatCopyFrame($displayFile, $displayLine, $func);
+        }
+
+        return $this->formatCopyFrame($displayFile ?: $fallbackFile, $displayLine ?: $fallbackLine, null);
+    }
+
+    private function formatCopyFrame(string $file, ?int $line, ?string $func): string
+    {
+        $location = $line === null ? $file : $file . ':' . $line;
+        $location = trim($location);
+        $function = trim((string)$func);
+
+        if ($function !== '') {
+            return 'at ' . $location . ' (' . $function . ')';
+        }
+
+        return 'at ' . $location;
     }
 
     private function formatTraceHtml(\Throwable $e): string
