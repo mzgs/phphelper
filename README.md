@@ -120,6 +120,40 @@ composer require mzgs/phphelper:dev-main
   // host, port, path, query, url
   ```
 
+- Authentication helpers are in `AuthManager`:
+
+  ```php
+  require_once 'src/AuthManager.php';
+
+  $users = [
+      'user@example.com' => [
+          'id' => 42,
+          'email' => 'user@example.com',
+          'password_hash' => password_hash('secret', PASSWORD_DEFAULT),
+      ],
+  ];
+
+  AuthManager::configure([
+      'password_field' => 'password_hash',
+      'user_provider' => static function (array $credentials) use ($users): ?array {
+          $email = $credentials['email'] ?? null;
+          return $users[$email] ?? null;
+      },
+  ]);
+
+  if (AuthManager::attempt(['email' => 'user@example.com', 'password' => 'secret'])) {
+      $user = AuthManager::user(); // Sanitized array without the password hash
+  }
+
+  AuthManager::setUserPersister(static function (array $data) {
+      // Persist the record and return the stored version
+      $data['id'] = 123;
+      return $data;
+  });
+
+  $newUser = AuthManager::register(['email' => 'new@example.com', 'password' => 'strong'], true);
+  ```
+
 ## Error Handler
 
 Capture PHP errors/exceptions and render a pretty error page (HTML in web, plaintext in CLI) with file, line, and code snippet highlighting.
