@@ -3,7 +3,9 @@ require_once __DIR__ . '/../src/ErrorHandler.php';
 require_once __DIR__ . '/../src/DB.php';
 ErrorHandler::enable();
 
-DB::mysql('test_db', 'roots', '1');
+DB::mysql('test_db', 'root', '1');  
+
+DB::getRow('SELECT * FROM userssd');
 
 
 ?>

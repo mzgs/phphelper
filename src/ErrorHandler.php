@@ -134,8 +134,7 @@ class ErrorHandler
     {
         // Avoid nested output if headers already started for some reason in CLI
         $type = $e instanceof \ErrorException ? $this->errorLevelToString($e->getSeverity()) : get_class($e);
-        $file = $e->getFile();
-        $line = $e->getLine();
+        [$file, $line] = $this->resolveDisplayFrame($e);
 
         $header = $type . ': ' . $e->getMessage();
         $separator = str_repeat('=', max(30, strlen($header)));
@@ -169,8 +168,7 @@ class ErrorHandler
         }
 
         $type = $e instanceof \ErrorException ? $this->errorLevelToString($e->getSeverity()) : get_class($e);
-        $file = $e->getFile();
-        $line = $e->getLine();
+        [$file, $line] = $this->resolveDisplayFrame($e);
         $messageRaw = $e->getMessage();
         $message = htmlspecialchars($messageRaw, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
@@ -386,5 +384,37 @@ class ErrorHandler
         }
         $html .= '</div>';
         return $html;
+    }
+
+    /**
+     * Determine which file/line should be highlighted in the rendered output.
+     *
+     * @return array{0:string,1:int}
+     */
+    private function resolveDisplayFrame(\Throwable $e): array
+    {
+        $file = $e->getFile();
+        $line = $e->getLine();
+
+        $trace = $e->getTrace();
+        if ($trace) {
+            for ($i = count($trace) - 1; $i >= 0; $i--) {
+                $frame = $trace[$i];
+                if (!isset($frame['file'], $frame['line'])) {
+                    continue;
+                }
+
+                $frameFile = (string)$frame['file'];
+                if ($frameFile === __FILE__) {
+                    continue;
+                }
+
+                $file = $frameFile;
+                $line = (int)$frame['line'];
+                break;
+            }
+        }
+
+        return [$file, $line];
     }
 }
