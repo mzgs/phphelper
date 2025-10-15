@@ -12,15 +12,16 @@ DB::mysql('phphelper', 'root', '1');
 AuthManager::init(DB::pdo(), [
     'table'           => 'users',
     'email_column'    => 'email',
-    'password_column' => 'password_hash',
+    'password_column' => 'password',
     
 ]);
 
 // AuthManager::register('new@example.com', '1');
 // $login = AuthManager::login('new@example.com', '1');
+ 
 
 
-//  Str::prettyLog( AuthManager::user()['email'] );
+ Str::prettyLog( AuthManager::user()['email'] );
  
  
 
