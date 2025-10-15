@@ -5,6 +5,7 @@ require_once __DIR__ . '/../src/Str.php';
 require_once __DIR__ . '/../src/AuthManager.php';
 require_once __DIR__ . '/../src/TwigHelper.php';
 require_once __DIR__ . '/../src/Logs.php';
+require_once __DIR__ . '/../src/Config.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 PrettyErrorHandler::enable();
 
@@ -25,6 +26,11 @@ AuthManager::init([
 
 
 //  Str::prettyLog( AuthManager::user()['email'] );
+
+
+Config::init();
+Config::createConfigTable();
+Config::set('site_name', 'PHP Helper');
 
 $twigCard = null;
 try {

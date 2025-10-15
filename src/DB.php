@@ -317,6 +317,128 @@ class DB
     }
 
     /**
+     * Insert or update a row using the database driver's native upsert syntax when possible.
+     *
+     * @param array<string, mixed> $data
+     * @param list<string>|string $conflictColumns
+     * @param list<string>|null $updateColumns
+     */
+    public static function upsert(string $table, array $data, array|string $conflictColumns, ?array $updateColumns = null): void
+    {
+        if ($data === []) {
+            throw new RuntimeException('Upsert requires non-empty data.');
+        }
+
+        $conflictColumns = (array) $conflictColumns;
+        if ($conflictColumns === []) {
+            throw new RuntimeException('Upsert requires at least one conflict column.');
+        }
+
+        $columns = array_keys($data);
+        $tableQuoted = self::quoteIdentifier($table);
+        $quotedColumns = array_map([self::class, 'quoteIdentifier'], $columns);
+        $placeholders = array_map(fn (string $col): string => ':' . $col, $columns);
+        $params = $data;
+
+        $updateColumns = $updateColumns ?? array_values(array_diff($columns, $conflictColumns));
+
+        foreach ($conflictColumns as $column) {
+            if (!array_key_exists($column, $data)) {
+                throw new RuntimeException('Upsert conflict column missing from data: ' . $column);
+            }
+        }
+
+        foreach ($updateColumns as $column) {
+            if (!array_key_exists($column, $data)) {
+                throw new RuntimeException('Upsert update column missing from data: ' . $column);
+            }
+        }
+
+        $pdo = self::pdo();
+        $driver = strtolower((string) $pdo->getAttribute(PDO::ATTR_DRIVER_NAME));
+
+        $sql = 'INSERT INTO ' . $tableQuoted
+             . ' (' . implode(', ', $quotedColumns) . ') VALUES (' . implode(', ', $placeholders) . ')';
+
+        $quotedConflict = array_map([self::class, 'quoteIdentifier'], $conflictColumns);
+
+        $updateAssignments = array_map(
+            fn (string $column): string => self::quoteIdentifier($column),
+            $updateColumns
+        );
+
+        switch ($driver) {
+            case 'mysql':
+                if ($updateAssignments === []) {
+                    $noOp = $quotedConflict[0];
+                    $sql .= ' ON DUPLICATE KEY UPDATE ' . $noOp . ' = ' . $noOp;
+                } else {
+                    $assignments = array_map(
+                        fn (string $col): string => $col . ' = VALUES(' . $col . ')',
+                        $updateAssignments
+                    );
+                    $sql .= ' ON DUPLICATE KEY UPDATE ' . implode(', ', $assignments);
+                }
+                self::execute($sql, $params);
+                return;
+
+            case 'pgsql':
+                $conflictExpr = '(' . implode(', ', $quotedConflict) . ')';
+                if ($updateAssignments === []) {
+                    $sql .= ' ON CONFLICT ' . $conflictExpr . ' DO NOTHING';
+                } else {
+                    $assignments = array_map(
+                        fn (string $col): string => $col . ' = EXCLUDED.' . $col,
+                        $updateAssignments
+                    );
+                    $sql .= ' ON CONFLICT ' . $conflictExpr . ' DO UPDATE SET ' . implode(', ', $assignments);
+                }
+                self::execute($sql, $params);
+                return;
+
+            case 'sqlite':
+                $conflictExpr = '(' . implode(', ', $quotedConflict) . ')';
+                if ($updateAssignments === []) {
+                    $sql .= ' ON CONFLICT' . ' ' . $conflictExpr . ' DO NOTHING';
+                } else {
+                    $assignments = array_map(
+                        fn (string $col): string => $col . ' = excluded.' . $col,
+                        $updateAssignments
+                    );
+                    $sql .= ' ON CONFLICT ' . $conflictExpr . ' DO UPDATE SET ' . implode(', ', $assignments);
+                }
+                self::execute($sql, $params);
+                return;
+
+            default:
+                self::transaction(function () use ($table, $data, $conflictColumns, $updateColumns): void {
+                    $updateData = [];
+                    foreach ($updateColumns as $column) {
+                        $updateData[$column] = $data[$column];
+                    }
+
+                    $whereParts = [];
+                    $whereParams = [];
+                    foreach ($conflictColumns as $column) {
+                        $paramName = 'conflict_' . preg_replace('/[^A-Za-z0-9_]/', '_', $column);
+                        $whereParts[] = self::quoteIdentifier($column) . ' = :' . $paramName;
+                        $whereParams[$paramName] = $data[$column];
+                    }
+
+                    $updated = 0;
+                    if ($updateData !== []) {
+                        $updated = self::update($table, $updateData, implode(' AND ', $whereParts), $whereParams);
+                    }
+
+                    if ($updated === 0) {
+                        self::insert($table, $data);
+                    }
+                });
+                return;
+        }
+    }
+
+    /**
      * Update rows matching WHERE clause; returns affected row count.
      *
      * @param array<string, mixed> $data

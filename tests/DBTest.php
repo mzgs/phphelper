@@ -100,4 +100,35 @@ final class DBTest extends TestCase
         $this->assertSame('"u"."name"', DB::quoteIdentifier('u.name'));
         $this->assertSame('*', DB::quoteIdentifier('*'));
     }
+
+    public function testUpsertInsertsAndUpdates(): void
+    {
+        DB::upsert('users', [
+            'id' => 1,
+            'name' => 'Initial',
+            'age' => 20,
+        ], 'id');
+
+        $row = DB::getRow('SELECT name, age FROM users WHERE id = 1');
+        $this->assertSame('Initial', $row['name'] ?? null);
+        $this->assertSame(20, (int) ($row['age'] ?? 0));
+
+        DB::upsert('users', [
+            'id' => 1,
+            'name' => 'Initial',
+            'age' => 25,
+        ], 'id', ['age']);
+
+        $row = DB::getRow('SELECT name, age FROM users WHERE id = 1');
+        $this->assertSame(25, (int) ($row['age'] ?? 0));
+
+        DB::upsert('users', [
+            'id' => 1,
+            'name' => 'Updated',
+            'age' => 25,
+        ], 'id');
+
+        $row = DB::getRow('SELECT name, age FROM users WHERE id = 1');
+        $this->assertSame('Updated', $row['name'] ?? null);
+    }
 }
