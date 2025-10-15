@@ -120,72 +120,41 @@ composer require mzgs/phphelper:dev-main
   // host, port, path, query, url
   ```
 
+
+
 - Authentication helpers are in `AuthManager`:
 
   ```php
+  require_once 'src/DB.php';
   require_once 'src/AuthManager.php';
 
-  $users = [
-      'user@example.com' => [
-          'id' => 42,
-          'email' => 'user@example.com',
-          'password_hash' => password_hash('secret', PASSWORD_DEFAULT),
-      ],
-  ];
-
-  AuthManager::configure([
-      'password_field' => 'password_hash',
-      'user_provider' => static function (array $credentials) use ($users): ?array {
-          $email = $credentials['email'] ?? null;
-          return $users[$email] ?? null;
-      },
-  ]);
-
-  if (AuthManager::attempt(['email' => 'user@example.com', 'password' => 'secret'])) {
-      $user = AuthManager::user(); // Sanitized array without the password hash
-  }
-
-  AuthManager::setUserPersister(static function (array $data) {
-      // Persist the record and return the stored version
-      $data['id'] = 123;
-      return $data;
-  });
-
-  $newUser = AuthManager::register(['email' => 'new@example.com', 'password' => 'strong'], true);
-  ```
-
-  MySQL-backed provider/persister (requires the `DB` helper):
-
-  ```php
-  require_once 'src/DB.php';
-
   DB::connect('sqlite::memory:'); // or DB::mysql('app', 'user', 'pass');
-  AuthManager::createUsersTable([
+
+  AuthManager::init(DB::pdo(), [
       'table' => 'users',
-      'password_field' => 'password_hash',
+      'email_column' => 'email',
+      'password_column' => 'password_hash',
+  ]);
+
+  // One-time helper: creates the table if it does not exist (safe to call repeatedly)
+  AuthManager::createUsersTable([
+      'password_column' => 'password_hash',
       'extra_columns' => ['active' => 'INTEGER DEFAULT 1'],
-  ]); // idempotent helper (requires DB::connected())
-
-  AuthManager::configure([
-      'mysql' => [
-          'pdo' => DB::pdo(), // only requirement; table defaults to "users"
-      ],
   ]);
 
-  // Optional: customise behaviour
-  AuthManager::configure([
-      'mysql' => [
-          'pdo' => DB::pdo(),
-          'table' => 'users',
-          'password_field' => 'password_hash',
-          'columns' => ['id', 'email', 'password_hash', 'name', 'active'],
-          'credential_map' => ['username' => 'email'], // map attempt key -> column
-          'conditions' => ['active' => 1],             // appended to WHERE clause
-      ],
+  $newUser = AuthManager::register('new@example.com', 'strong-password', [
+      'name' => 'New User',
+      'active' => 1,
   ]);
 
-  AuthManager::attempt(['username' => 'user@example.com', 'password' => 'secret']);
+  $sessionUser = AuthManager::login('new@example.com', 'strong-password');
+  if ($sessionUser !== null) {
+      $currentUser = AuthManager::user(); // password hash removed
+  }
   ```
+
+- `init` and `createUsersTable` accept the same configuration keys (`table`, `email_column`, `password_column`, `primary_key`, `extra_columns`) so you can adapt to existing schemas.
+- `login` returns the sanitized user record or `null`; `AuthManager::user()` always reflects the last successful login.
 
 ## Error Handler
 
