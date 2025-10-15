@@ -177,6 +177,14 @@ class AuthManager
     }
 
     /**
+     * Determine whether a user is currently authenticated.
+     */
+    public static function isLoggedIn(): bool
+    {
+        return self::$currentUser !== null;
+    }
+
+    /**
      * Ensure that init() was called.
      */
     protected static function ensureInitialized(): void

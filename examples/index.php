@@ -1,18 +1,32 @@
 <?php
 require_once __DIR__ . '/../src/PrettyErrorHandler.php';
 require_once __DIR__ . '/../src/DB.php';
+require_once __DIR__ . '/../src/Str.php';
 require_once __DIR__ . '/../src/AuthManager.php';
 PrettyErrorHandler::enable();
 
 DB::mysql('phphelper', 'root', '1');  
 
 // DB::getRow('SELECT * FROM users');
+
+AuthManager::init(DB::pdo(), [
+    'table'           => 'users',
+    'email_column'    => 'email',
+    'password_column' => 'password_hash',
+]);
+
+// AuthManager::register('new@example.com', '1');
+// $login = AuthManager::login('new@example.com', '1');
+
+
+ Str::prettyLog( AuthManager::user()['email'] );
  
  
 
+
 ?>
 <!doctype html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -48,7 +62,7 @@ DB::mysql('phphelper', 'root', '1');
             </div>
 
             <div class="alert alert-info" role="alert">
-                <strong>Tip:</strong> The custom error handler is enabled; errors render with details in development.
+                <strong>Tip:</strong>   The custom error handler is enabled; errors render with details in development.
             </div>
         </div>
     </div>

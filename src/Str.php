@@ -543,4 +543,31 @@ class Str
         {
         return self::seoFileName(str_replace('.', '', $text));
     }
+
+
+    // Debug helpers
+    // Usage: Str::prettyLog($var);
+    static function prettyLog($v)
+    {
+        print ("<pre>" . print_r($v, true) . "</pre>");
+    }
+
+    
+
+    static function prettyLogExit($v)
+    {
+        self::blackBG();
+        self::prettyLog($v);
+        exit;
+    }
+
+    static function print_functions($obj)
+    {
+        self::prettyLog(get_class_methods($obj));
+    }
+
+    static function blackBG()
+    {
+        echo "<!DOCTYPE html><html><head><style>body { background-color: black; color: #eee; }</style></head><body></body></html>";
+    }
 }
