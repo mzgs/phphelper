@@ -24,6 +24,7 @@ composer require mzgs/phphelper:dev-main
 
   ```php
   require_once 'src/DB.php';
+  require_once 'src/Logs.php';
 
   // 1) Connect (SQLite in-memory)
   DB::connect('sqlite::memory:');
@@ -33,12 +34,18 @@ composer require mzgs/phphelper:dev-main
   $row = DB::getRow('SELECT * FROM items WHERE id = :id', ['id' => $id]);
   $total = DB::count('items');
 
+  // Lightweight MySQL logger
+  Logs::createLogsTable(); // creates a default table for the current driver
+  Logs::info('user.login', ['user_id' => 5], ['ip' => '127.0.0.1']); // meta stores extra request/session data
+  
   // Transactions (atomic group of operations)
   DB::transaction(function () {
       DB::insert('items', ['name' => 'a']);
       DB::insert('items', ['name' => 'b']);
   });
   ```
+
+- `meta` is optional JSON payload for ancillary details that you want to persist but rarely filter on (request IDs, headers, performance metrics, etc.). Use the third `$context` argument for primary structured data that you expect to query. `Logs::log()` stores both arrays as JSON columns automatically.
 
 - MySQL example:
 
