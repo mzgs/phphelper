@@ -3,11 +3,11 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 
+require_once __DIR__ . '/../src/DB.php';
 require_once __DIR__ . '/../src/AuthManager.php';
 
 final class AuthManagerTest extends TestCase
 {
-    private PDO $pdo;
 
     protected function setUp(): void
     {
@@ -19,8 +19,8 @@ final class AuthManagerTest extends TestCase
         $_SESSION = [];
         $_COOKIE = [];
 
-        $this->pdo = new PDO('sqlite::memory:');
-        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        DB::disconnect();
+        DB::sqlite(':memory:');
     }
 
     protected function tearDown(): void
@@ -32,6 +32,8 @@ final class AuthManagerTest extends TestCase
 
         $_SESSION = [];
         $_COOKIE = [];
+
+        DB::disconnect();
     }
 
     private function initManager(array $config = []): void
@@ -40,7 +42,7 @@ final class AuthManagerTest extends TestCase
             'session_key' => 'auth_user_for_tests',
             'remember_secret' => 'test-remember-secret',
         ];
-        AuthManager::init($this->pdo, array_merge($base, $config));
+        AuthManager::init(array_merge($base, $config));
         AuthManager::createUsersTable();
     }
 
@@ -87,7 +89,7 @@ final class AuthManagerTest extends TestCase
         session_write_close();
         $_SESSION = [];
 
-        AuthManager::init($this->pdo, array_merge(['session_key' => 'auth_user_for_tests'], $config));
+        AuthManager::init(array_merge(['session_key' => 'auth_user_for_tests'], $config));
 
         $user = AuthManager::user();
         $this->assertNotNull($user);

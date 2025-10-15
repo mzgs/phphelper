@@ -12,7 +12,7 @@ DB::mysql('phphelper', 'root', '1');
 
 // DB::getRow('SELECT * FROM users');
 
-AuthManager::init(DB::pdo(), [
+AuthManager::init([
     'table'           => 'users',
     'email_column'    => 'email',
     'password_column' => 'password',

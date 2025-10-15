@@ -3,7 +3,7 @@
 
 class AuthManager
 {
-    protected static ?PDO $pdo = null;
+    protected static bool $initialized = false;
     protected static string $table = 'users';
     protected static string $emailColumn = 'email';
     protected static string $passwordColumn = 'password';
@@ -46,9 +46,14 @@ class AuthManager
      *     }
      * } $config
      */
-    public static function init(PDO $pdo, array $config = []): void
+    public static function init(array $config = []): void
     {
-        self::$pdo = $pdo;
+        if (!DB::connected()) {
+            throw new RuntimeException('DB::connect() (or a helper such as DB::sqlite()) must be called before AuthManager::init().');
+        }
+
+        self::$initialized = false;
+
         self::$currentUser = null;
         self::$useSessions = true;
         self::$sessionKey = '_auth_user';
@@ -128,6 +133,8 @@ class AuthManager
             self::$rememberSecret = self::defaultRememberSecret();
         }
 
+        self::$initialized = true;
+
         self::bootstrapSession();
         self::attemptRememberRestore();
     }
@@ -163,7 +170,8 @@ class AuthManager
             self::$primaryKey = self::validateIdentifier($options['primary_key'], 'primary key');
         }
 
-        $driver = strtolower((string) self::$pdo->getAttribute(PDO::ATTR_DRIVER_NAME));
+        $pdo = DB::pdo();
+        $driver = strtolower((string) $pdo->getAttribute(PDO::ATTR_DRIVER_NAME));
         $columns = self::defaultColumnsForDriver($driver, self::$primaryKey, self::$emailColumn, self::$passwordColumn);
 
         $extra = $options['extra_columns'] ?? [];
@@ -175,8 +183,8 @@ class AuthManager
             $columns[] = $name . ' ' . $definition;
         }
 
-        $sql = 'CREATE TABLE IF NOT EXISTS ' . self::$table . " (\n    " . implode(",\n    ", $columns) . "\n)";
-        self::$pdo->exec($sql);
+        $sql = 'CREATE TABLE IF NOT EXISTS ' . DB::quoteIdentifier(self::$table) . " (\n    " . implode(",\n    ", $columns) . "\n)";
+        $pdo->exec($sql);
     }
 
     /**
@@ -242,14 +250,7 @@ class AuthManager
             self::validateIdentifier($column, 'column');
         }
 
-        $placeholders = array_map(static fn ($column) => ':' . $column, $columns);
-        $sql = 'INSERT INTO ' . self::$table . ' (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ')';
-
-        $stmt = self::$pdo->prepare($sql);
-        foreach ($data as $column => $value) {
-            $stmt->bindValue(':' . $column, $value);
-        }
-        $stmt->execute();
+        DB::insert(self::$table, $data);
 
         $user = self::getUserByColumn(self::$emailColumn, $email);
         if ($user === null) {
@@ -513,7 +514,7 @@ class AuthManager
      */
     protected static function ensureInitialized(): void
     {
-        if (!self::$pdo instanceof PDO) {
+        if (!self::$initialized) {
             throw new RuntimeException('AuthManager::init() must be called before using authentication helpers.');
         }
     }
@@ -570,17 +571,10 @@ class AuthManager
         self::ensureInitialized();
         self::validateIdentifier($column, 'column');
 
-        $sql = 'SELECT * FROM ' . self::$table . ' WHERE ' . $column . ' = :value LIMIT 1';
-        $stmt = self::$pdo->prepare($sql);
-        $stmt->bindValue(':value', $value);
-        $stmt->execute();
+        $sql = 'SELECT * FROM ' . DB::quoteIdentifier(self::$table)
+             . ' WHERE ' . DB::quoteIdentifier($column) . ' = :value LIMIT 1';
 
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($user === false) {
-            return null;
-        }
-
-        return $user;
+        return DB::getRow($sql, ['value' => $value]);
     }
 
     protected static function updatePasswordHash($id, string $password): void
@@ -592,11 +586,7 @@ class AuthManager
         }
 
         $hash = password_hash($password, PASSWORD_DEFAULT);
-        $sql = 'UPDATE ' . self::$table . ' SET ' . self::$passwordColumn . ' = :hash WHERE ' . self::$primaryKey . ' = :id';
-        $stmt = self::$pdo->prepare($sql);
-        $stmt->bindValue(':hash', $hash);
-        $stmt->bindValue(':id', $id);
-        $stmt->execute();
+        DB::update(self::$table, [self::$passwordColumn => $hash], self::$primaryKey . ' = :id', ['id' => $id]);
     }
 
     /**

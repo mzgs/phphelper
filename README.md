@@ -160,7 +160,7 @@ composer require mzgs/phphelper:dev-main
 
   DB::connect('sqlite::memory:'); // or DB::mysql('app', 'user', 'pass');
 
-  AuthManager::init(DB::pdo(), [
+  AuthManager::init([
       'table' => 'users',
       'email_column' => 'email',
       'password_column' => 'password_hash',
