@@ -134,6 +134,9 @@ composer require mzgs/phphelper:dev-main
       'table' => 'users',
       'email_column' => 'email',
       'password_column' => 'password_hash',
+      // provide a strong secret to enable signed remember-me cookies (ideally from env)
+      'remember_secret' => 'change-this-secret',
+      'remember_me' => true,
   ]);
 
   // One-time helper: creates the table if it does not exist (safe to call repeatedly)
@@ -147,14 +150,17 @@ composer require mzgs/phphelper:dev-main
       'active' => 1,
   ]);
 
-  $sessionUser = AuthManager::login('new@example.com', 'strong-password');
+  // Pass true to issue a persistent signed cookie in addition to the PHP session
+  $sessionUser = AuthManager::login('new@example.com', 'strong-password', true);
   if ($sessionUser !== null) {
       $currentUser = AuthManager::user(); // password hash removed
   }
   ```
 
-- `init` and `createUsersTable` accept the same configuration keys (`table`, `email_column`, `password_column`, `primary_key`, `extra_columns`) so you can adapt to existing schemas.
-- `login` returns the sanitized user record or `null`; `AuthManager::user()` always reflects the last successful login.
+- `init` accepts additional session/remember-me options: toggle sessions (`sessions`), change the session key (`session_key`), configure cookie name/duration/options (`remember_*`, default duration 360 days), and supply an optional `remember_secret` used to sign cookies (a deterministic fallback is generated, but overriding with your own secret is strongly recommended).
+- A PHP session is bootstrapped automatically; successful logins are written to `$_SESSION` and (optionally) to a signed cookie for future requests.
+- `login` returns the sanitized user record or `null`; use the third argument to control persistent cookies.
+- `AuthManager::user()` exposes the current user and `AuthManager::isLoggedIn()` provides a quick boolean check.
 
 ## Error Handler
 
