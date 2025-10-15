@@ -6,6 +6,8 @@ require_once __DIR__ . '/../src/AuthManager.php';
 require_once __DIR__ . '/../src/TwigHelper.php';
 require_once __DIR__ . '/../src/Logs.php';
 require_once __DIR__ . '/../src/Config.php';
+require_once __DIR__ . '/../src/Format.php';
+require_once __DIR__ . '/../src/AIChat.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 PrettyErrorHandler::enable();
 
@@ -27,6 +29,13 @@ AuthManager::init([
 
 //  Str::prettyLog( AuthManager::user()['email'] );
 
+AIChat::init([
+    'api_key' => getenv('OPENAI_API_KEY'),
+    'model' => 'gpt-4o-mini',
+]); 
+
+$res = AIChat::reply( 'test' );
+Str::prettyLog($res);
 
 Config::init();
 Config::createConfigTable();

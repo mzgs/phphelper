@@ -127,6 +127,31 @@ composer require mzgs/phphelper:dev-main
   // host, port, path, query, url
   ```
 
+- AI chat helpers are provided by `AIChat`:
+
+  ```php
+  require_once 'src/AIChat.php';
+
+  AIChat::init([
+      'api_key' => getenv('OPENAI_API_KEY'),
+      'model' => 'gpt-4o-mini',
+  ]);
+
+  $conversation = [
+      ['role' => 'system', 'content' => 'You are a helpful assistant.'],
+      ['role' => 'user', 'content' => 'List the highlights from our latest release.'],
+  ];
+
+  $chatResponse = AIChat::chat($conversation, ['temperature' => 0.3]);
+  $firstReply = $chatResponse['choices'][0]['message']['content'] ?? '';
+
+  $summary = AIChat::reply(
+      'Now provide a concise summary.',
+      ['temperature' => 0.2],
+      $conversation
+  );
+  ```
+
 - Twig templates are rendered via `TwigHelper`:
 
   ```php
