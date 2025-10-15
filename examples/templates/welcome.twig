@@ -4,4 +4,5 @@
     <p class="mb-0 text-muted">{{ message }}</p>
     <p> {{daysago | ago}}  </p>
     <p> {{ format_short_number(1234566,2) }} </p>
+    <a class="link-primary" href="{{ with_query_params({'promo': 'spring', 'page': 4}) }}">View spring offers</a>
 </div>

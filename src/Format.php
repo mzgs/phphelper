@@ -301,6 +301,10 @@ class Format
         if ($json === false) {
             return 'null';
         }
+
+        // Unescape quotes and slashes for display readability.
+        $json = str_replace(["\\\"", "\\/", "\/"], ["\"", "/", "/"], $json);
+
         return $json;
     }
 }

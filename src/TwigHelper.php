@@ -339,6 +339,28 @@ class TwigHelper
             ['name' => 'format_number', 'callable' => [Format::class, 'number'], 'options' => []],
             ['name' => 'format_percent', 'callable' => [Format::class, 'percent'], 'options' => []],
             ['name' => 'format_short_number', 'callable' => [Format::class, 'shortNumber'], 'options' => []],
+            [
+                'name' => 'with_query_params',
+                'callable' => static function ($paramNameOrMap, $paramValue = null) {
+                    $currentUrl = $_SERVER['REQUEST_URI'] ?? '/';
+                    $parsedUrl = parse_url($currentUrl) ?: [];
+                    parse_str($parsedUrl['query'] ?? '', $queryParams);
+
+                    if (is_array($paramNameOrMap)) {
+                        foreach ($paramNameOrMap as $name => $value) {
+                            $queryParams[$name] = $value;
+                        }
+                    } elseif ($paramNameOrMap !== null) {
+                        $queryParams[$paramNameOrMap] = $paramValue;
+                    }
+
+                    $newQueryString = http_build_query($queryParams);
+                    $newPath = rtrim($parsedUrl['path'] ?? '/', '/') . '/';
+
+                    return $newQueryString === '' ? $newPath : $newPath . '?' . $newQueryString;
+                },
+                'options' => [],
+            ],
         ];
     }
 
