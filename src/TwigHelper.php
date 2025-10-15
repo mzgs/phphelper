@@ -3,6 +3,8 @@
 class TwigHelper
 {
     private static ?\Twig\Environment $environment = null;
+    /** @var ?\SplObjectStorage<\Twig\Environment, bool> */
+    private static ?\SplObjectStorage $bootstrapped = null;
 
     /**
      * Bootstrap a Twig environment using a filesystem loader and remember it for later use.
@@ -26,6 +28,7 @@ class TwigHelper
 
         $environment = new \Twig\Environment($loader, array_merge(self::defaultOptions(), $options));
         self::$environment = $environment;
+        self::registerDefaults($environment);
         return $environment;
     }
 
@@ -35,6 +38,7 @@ class TwigHelper
     public static function setEnvironment(\Twig\Environment $environment): void
     {
         self::$environment = $environment;
+        self::registerDefaults($environment);
     }
 
     /**
@@ -101,6 +105,28 @@ class TwigHelper
         self::assertTwigAvailable(\Twig\TwigFilter::class);
         $env = self::resolveEnvironment($environment);
         $env->addFilter(new \Twig\TwigFilter($name, $callable, $options));
+    }
+
+    /**
+     * Register the common helper filters and functions provided by this library.
+     */
+    public static function registerDefaults(?\Twig\Environment $environment = null): void
+    {
+        $env = $environment instanceof \Twig\Environment
+            ? $environment
+            : self::resolveEnvironment($environment);
+
+        if (self::$bootstrapped === null) {
+            self::$bootstrapped = new \SplObjectStorage();
+        }
+
+        if (self::$bootstrapped->contains($env)) {
+            return;
+        }
+
+        self::registerDefaultFilters($env);
+        self::registerDefaultFunctions($env);
+        self::$bootstrapped->attach($env, true);
     }
 
     /**
@@ -233,6 +259,110 @@ class TwigHelper
     {
         if (!class_exists($class)) {
             throw new RuntimeException('Twig is not available. Install it via "composer require twig/twig".');
+        }
+    }
+
+    private static function registerDefaultFilters(\Twig\Environment $environment): void
+    {
+        foreach (self::defaultFilters() as $definition) {
+            if (!self::isCallableAvailable($definition['callable'])) {
+                continue;
+            }
+            $environment->addFilter(new \Twig\TwigFilter(
+                $definition['name'],
+                $definition['callable'],
+                $definition['options']
+            ));
+        }
+    }
+
+    private static function registerDefaultFunctions(\Twig\Environment $environment): void
+    {
+        foreach (self::defaultFunctions() as $definition) {
+            if (!self::isCallableAvailable($definition['callable'])) {
+                continue;
+            }
+            $environment->addFunction(new \Twig\TwigFunction(
+                $definition['name'],
+                $definition['callable'],
+                $definition['options']
+            ));
+        }
+    }
+
+    /**
+     * @return array<int, array{name: string, callable: callable|array|string, options: array<string, mixed>}> 
+     */
+    private static function defaultFilters(): array
+    {
+        return [
+            ['name' => 'bytes', 'callable' => [Format::class, 'bytes'], 'options' => []],
+            ['name' => 'currency', 'callable' => [Format::class, 'currency'], 'options' => []],
+            ['name' => 'number', 'callable' => [Format::class, 'number'], 'options' => []],
+            ['name' => 'percent', 'callable' => [Format::class, 'percent'], 'options' => []],
+            ['name' => 'short_number', 'callable' => [Format::class, 'shortNumber'], 'options' => []],
+            ['name' => 'duration', 'callable' => [Format::class, 'duration'], 'options' => []],
+            ['name' => 'hms', 'callable' => [Format::class, 'hms'], 'options' => []],
+            ['name' => 'ordinal', 'callable' => [Format::class, 'ordinal'], 'options' => []],
+            ['name' => 'bool_label', 'callable' => [Format::class, 'bool'], 'options' => []],
+            ['name' => 'json_pretty', 'callable' => [Format::class, 'json'], 'options' => []],
+            ['name' => 'ago', 'callable' => [Date::class, 'ago'], 'options' => []],
+            ['name' => 'slug', 'callable' => [Str::class, 'slug'], 'options' => []],
+            ['name' => 'camel', 'callable' => [Str::class, 'camel'], 'options' => []],
+            ['name' => 'snake', 'callable' => [Str::class, 'snake'], 'options' => []],
+            ['name' => 'studly', 'callable' => [Str::class, 'studly'], 'options' => []],
+            ['name' => 'titlecase', 'callable' => [Str::class, 'title'], 'options' => []],
+            ['name' => 'lowercase', 'callable' => [Str::class, 'lower'], 'options' => []],
+            ['name' => 'uppercase', 'callable' => [Str::class, 'upper'], 'options' => []],
+            ['name' => 'limit', 'callable' => [Str::class, 'limit'], 'options' => []],
+            ['name' => 'words', 'callable' => [Str::class, 'words'], 'options' => []],
+            ['name' => 'squish', 'callable' => [Str::class, 'squish'], 'options' => []],
+            ['name' => 'seo_filename', 'callable' => [Str::class, 'seoFileName'], 'options' => []],
+            ['name' => 'seo_url', 'callable' => [Str::class, 'seoUrl'], 'options' => []],
+        ];
+    }
+
+    /**
+     * @return array<int, array{name: string, callable: callable|array|string, options: array<string, mixed>}> 
+     */
+    private static function defaultFunctions(): array
+    {
+        return [
+            ['name' => 'format_date', 'callable' => [Date::class, 'format'], 'options' => []],
+            ['name' => 'date_timestamp', 'callable' => [Date::class, 'timestamp'], 'options' => []],
+            ['name' => 'array_get', 'callable' => [Arrays::class, 'get'], 'options' => []],
+            ['name' => 'array_has', 'callable' => [Arrays::class, 'has'], 'options' => []],
+            ['name' => 'array_first', 'callable' => [Arrays::class, 'first'], 'options' => []],
+            ['name' => 'array_last', 'callable' => [Arrays::class, 'last'], 'options' => []],
+            ['name' => 'format_bytes', 'callable' => [Format::class, 'bytes'], 'options' => []],
+            ['name' => 'format_currency', 'callable' => [Format::class, 'currency'], 'options' => []],
+            ['name' => 'format_number', 'callable' => [Format::class, 'number'], 'options' => []],
+            ['name' => 'format_percent', 'callable' => [Format::class, 'percent'], 'options' => []],
+            ['name' => 'format_short_number', 'callable' => [Format::class, 'shortNumber'], 'options' => []],
+        ];
+    }
+
+    private static function isCallableAvailable(callable|array|string $callable): bool
+    {
+        if (is_array($callable) && isset($callable[0]) && is_string($callable[0])) {
+            self::ensureHelper($callable[0]);
+        } elseif (is_string($callable) && str_contains($callable, '::')) {
+            [$class] = explode('::', $callable, 2);
+            self::ensureHelper($class);
+        }
+
+        return is_callable($callable);
+    }
+
+    private static function ensureHelper(string $class): void
+    {
+        if (class_exists($class, false)) {
+            return;
+        }
+
+        $file = __DIR__ . '/' . $class . '.php';
+        if (is_file($file)) {
+            require_once $file;
         }
     }
 }

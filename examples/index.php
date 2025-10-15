@@ -34,6 +34,7 @@ try {
     $twigCard = TwigHelper::render('welcome.twig', [
         'title' => 'TwigHelper in Action',
         'message' => 'This block is rendered from a Twig template stored in examples/templates.',
+        'daysago' => strtotime('-2 days'),
     ]);
 } catch (Throwable $twigError) {
     $twigCard = '<div class="alert alert-warning mb-0">Twig example unavailable: '

@@ -60,6 +60,22 @@ final class TwigHelperTest extends TestCase
         $this->assertSame('HELLO 8', TwigHelper::render('macros.twig', ['name' => 'hello', 'value' => 4]));
     }
 
+    public function testDefaultFiltersAndFunctionsAreRegistered(): void
+    {
+        $dir = $this->createTemplateDirectory('helpers', [
+            'format.twig' => '{{ "Hello World"|slug }}|{{ 2048|bytes }}|{{ 1234|short_number }}|{{ 1|ordinal }}|{{ format_date(date_value, "date") }}|{{ array_get(user, "profile.name") }}',
+        ]);
+
+        TwigHelper::init($dir);
+
+        $output = TwigHelper::render('format.twig', [
+            'date_value' => '2024-01-05 10:20:30',
+            'user' => ['profile' => ['name' => 'Ada']],
+        ]);
+
+        $this->assertSame('hello-world|2 KB|1.2K|1st|2024-01-05|Ada', $output);
+    }
+
     public function testSetEnvironmentUsesProvidedInstance(): void
     {
         $dir = $this->createTemplateDirectory('custom', [
