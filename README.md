@@ -120,6 +120,29 @@ composer require mzgs/phphelper:dev-main
   // host, port, path, query, url
   ```
 
+- Twig templates are rendered via `TwigHelper`:
+
+  ```php
+  require_once 'src/TwigHelper.php';
+
+  // Point Twig at your template directories (namespaces optional)
+  TwigHelper::init([
+      __DIR__ . '/resources/views',
+      'emails' => __DIR__ . '/resources/views/emails',
+  ], [
+      'strict_variables' => true,
+  ]);
+
+  // Share globals and add re-usable helpers
+  TwigHelper::addGlobal('appName', 'PHP Helper');
+  TwigHelper::addFunction('uppercase', fn (string $value): string => strtoupper($value));
+
+  echo TwigHelper::render('welcome.twig', ['user' => 'Ada']);
+  echo TwigHelper::render('@emails/reminder.twig', ['user' => 'Bob']);
+  ```
+
+  Templates can use the globals and helpers immediately, e.g. `{{ appName }}` or `{{ uppercase(user) }}`. See `examples/index.php` for a simple Bootstrap card rendered with Twig.
+
 
 
 - Authentication helpers are in `AuthManager`:

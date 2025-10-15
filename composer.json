@@ -3,7 +3,8 @@
     "description": "A comprehensive PHP helper library with database, file, login, and utility helpers",
     "type": "library",
     "require": {
-        "php": "^8.3"
+        "php": "^8.3",
+        "twig/twig": "^3.21"
     },
     "license": "MIT",
     "autoload": {

@@ -3,6 +3,8 @@ require_once __DIR__ . '/../src/PrettyErrorHandler.php';
 require_once __DIR__ . '/../src/DB.php';
 require_once __DIR__ . '/../src/Str.php';
 require_once __DIR__ . '/../src/AuthManager.php';
+require_once __DIR__ . '/../src/TwigHelper.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 PrettyErrorHandler::enable();
 
 DB::mysql('phphelper', 'root', '1');  
@@ -23,9 +25,20 @@ AuthManager::init(DB::pdo(), [
 
 
 //  Str::prettyLog( AuthManager::user()['email'] );
- 
- 
 
+$twigCard = null;
+try {
+    $templatesDir = __DIR__ . '/templates';
+    TwigHelper::init($templatesDir);
+    TwigHelper::addGlobal('app_name', 'PHP Helper');
+    $twigCard = TwigHelper::render('welcome.twig', [
+        'title' => 'TwigHelper in Action',
+        'message' => 'This block is rendered from a Twig template stored in examples/templates.',
+    ]);
+} catch (Throwable $twigError) {
+    $twigCard = '<div class="alert alert-warning mb-0">Twig example unavailable: '
+        . htmlspecialchars($twigError->getMessage(), ENT_QUOTES) . '</div>';
+}
 
 ?>
 <!doctype html>
@@ -61,6 +74,12 @@ AuthManager::init(DB::pdo(), [
                             <a class="btn btn-sm btn-primary" href="example.php">Open example.php</a>
                         </li>
                     </ul>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <?php echo $twigCard; ?>
                 </div>
             </div>
 
