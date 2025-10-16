@@ -7,6 +7,7 @@ use PhpHelper\AIChat;
 use PhpHelper\Config;
 use PhpHelper\TwigHelper;
 use PhpHelper\AuthManager;
+use PhpHelper\Countries;
 use PhpHelper\Logs;
 use PhpHelper\PrettyErrorHandler;
 require_once __DIR__ . '/../vendor/autoload.php';
@@ -17,13 +18,13 @@ require_once __DIR__ . '/../vendor/autoload.php';
 // ---- PRODUCTION ----
 if (App::isProduction()) {
     DB::mysql('phphelper', 'root', '1');
-    PrettyErrorHandler::enable(['display' => false, 'log_errors' => true]);
+    PrettyErrorHandler::init(['display' => false, 'log_errors' => true]);
 
 } 
 // ---- LOCAL ----
 else {
     DB::mysql('phphelper', 'root', '1');
-    PrettyErrorHandler::enable(['display' => true, 'log_errors' => false]);
+    PrettyErrorHandler::init(['display' => true, 'log_errors' => false]);
 
 }   
 
@@ -61,6 +62,7 @@ Config::createConfigTable();
 Config::set('site_name', 'PHP Helper');
 
 
+echo Countries::nameWithFlag('tr');
 
 
 $twigCard = null;
