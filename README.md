@@ -12,1804 +12,1828 @@ composer require mzgs/phphelper:dev-main
 
 - PHP 8.3 or higher
 
-## Contents
+## Table of Contents
 
-- [AIChat](#aichat)
-- [App](#app)
-- [Arrays](#arrays)
-- [AuthManager](#authmanager)
-- [Config](#config)
-- [DB](#db)
-- [Date](#date)
-- [Files](#files)
-- [Format](#format)
-- [Http](#http)
-- [Logs](#logs)
-- [PrettyErrorHandler](#prettyerrorhandler)
-- [Str](#str)
-- [TwigHelper](#twighelper)
+1. [AIChat](#aichat) - AI chat integration with OpenAI API
+2. [App](#app) - Application environment detection utilities  
+3. [Arrays](#arrays) - Array manipulation and utilities
+4. [AuthManager](#authmanager) - User authentication and session management
+5. [Config](#config) - Configuration management with database storage
+6. [DB](#db) - Database abstraction layer for PDO
+7. [Date](#date) - Date and time formatting utilities
+8. [Files](#files) - File system operations
+9. [Format](#format) - Data formatting utilities
+10. [Http](#http) - HTTP utilities and client information
+11. [Logs](#logs) - Logging system with database storage
+12. [PrettyErrorHandler](#prettyerrorhandler) - Enhanced error display
+13. [Str](#str) - String manipulation utilities
+14. [TwigHelper](#twighelper) - Twig template engine integration
+
+---
 
 ## AIChat
 
-Interact with OpenAI-compatible chat completion endpoints using a minimal fluent wrapper.
+AI chat integration providing easy interaction with OpenAI-compatible APIs.
 
-### AIChat::init(array $config): void
-Configure the HTTP client and default payload.
-
-**Options**
-- `base_uri` (string) Base URL for the API, defaults to `https://api.openai.com/v1/`.
-- `endpoint` (string) Relative endpoint, defaults to `chat/completions`.
-- `model` (string) Default model name, defaults to `gpt-4o-mini`.
-- `api_key` (?string) Bearer token used to authorise requests.
-- `timeout` (?float) Request timeout in seconds (e.g. `15.0`).
-- `headers` (array<string, string>) Extra headers merged into every request.
-- `response_format` (string|array|null) Default response format sent to the API.
-- `client_options` (array<string, mixed>) Extra options forwarded to the underlying `GuzzleHttp\Client` constructor.
+### Configuration Options
 
 ```php
-use PhpHelper\AIChat;
-
 AIChat::init([
-    'api_key' => getenv('OPENAI_API_KEY'),
-    'model' => 'gpt-4o-mini',
-    'timeout' => 30,
-    'headers' => ['X-Request-Id' => 'phphelper-demo'],
+    'base_uri' => 'https://api.openai.com/v1/',  // API base URL
+    'endpoint' => 'chat/completions',             // Chat endpoint
+    'model' => 'gpt-4o-mini',                     // Default model
+    'api_key' => 'your-api-key',                  // API key
+    'timeout' => 15.0,                            // Request timeout
+    'headers' => [],                              // Additional headers
+    'response_format' => null,                    // Response format
+    'client_options' => []                        // Additional Guzzle options
 ]);
 ```
 
-### AIChat::setApiKey(?string $apiKey): void
-Override the stored API key without touching other configuration.
+### Methods
+
+#### `init(array $config): void`
+Configure the AI chat client.
 
 ```php
-use PhpHelper\AIChat;
+// Basic configuration
+AIChat::init([
+    'api_key' => 'sk-your-openai-api-key',
+    'model' => 'gpt-4'
+]);
 
-AIChat::setApiKey('sk-test-123');
+// Advanced configuration with custom headers
+AIChat::init([
+    'api_key' => 'sk-your-key',
+    'model' => 'gpt-3.5-turbo',
+    'timeout' => 30.0,
+    'headers' => ['User-Agent' => 'MyApp/1.0'],
+    'response_format' => 'json_object'
+]);
 ```
 
-### AIChat::setClient(?GuzzleHttp\Client $client): void
-Inject a pre-configured Guzzle client. Pass `null` to rebuild it from the stored config.
+#### `setApiKey(?string $apiKey): void`
+Set or update the API key.
 
 ```php
-use GuzzleHttp\Client;
-use PhpHelper\AIChat;
-
-AIChat::setClient(new Client(['base_uri' => 'https://api.example.test/v1/']));
+AIChat::setApiKey('sk-new-api-key');
 ```
 
-### AIChat::reset(): void
-Restore the default configuration and dispose of the cached HTTP client.
+#### `chat(array $messages, array $payload = []): array`
+Send chat messages to the AI API.
 
 ```php
-use PhpHelper\AIChat;
+// Simple conversation
+$messages = [
+    ['role' => 'user', 'content' => 'Hello, how are you?']
+];
+$response = AIChat::chat($messages);
+echo $response['choices'][0]['message']['content'];
 
+// With system prompt and temperature
+$messages = [
+    ['role' => 'system', 'content' => 'You are a helpful assistant.'],
+    ['role' => 'user', 'content' => 'Explain quantum physics simply.']
+];
+$response = AIChat::chat($messages, [
+    'temperature' => 0.7,
+    'max_tokens' => 150
+]);
+```
+
+#### `reply(string $prompt, array $payload = [], array $contextMessages = []): string`
+Get a direct reply to a prompt.
+
+```php
+// Simple reply
+$answer = AIChat::reply('What is the capital of France?');
+echo $answer; // "Paris"
+
+// With context and parameters
+$context = [
+    ['role' => 'system', 'content' => 'You are a coding tutor.']
+];
+$answer = AIChat::reply(
+    'How do I create a PHP class?',
+    ['temperature' => 0.3],
+    $context
+);
+```
+
+#### `reset(): void`
+Reset configuration to defaults.
+
+```php
 AIChat::reset();
 ```
 
-### AIChat::chat(array $messages, array $payload = []): array
-Execute a raw chat completion request.
-
-```php
-use PhpHelper\AIChat;
-
-$messages = [
-    ['role' => 'system', 'content' => 'You are a concise assistant.'],
-    ['role' => 'user', 'content' => 'Explain closures in PHP.'],
-];
-
-$response = AIChat::chat($messages, ['temperature' => 0.4]);
-$assistantReply = $response['choices'][0]['message']['content'] ?? '';
-```
-
-### AIChat::reply(string $prompt, array $payload = [], array $contextMessages = []): string
-Send a convenience request using a plain user prompt and optional preceding context messages.
-
-```php
-use PhpHelper\AIChat;
-
-$answer = AIChat::reply('Summarise PSR-4 autoloading in two sentences.');
-```
+---
 
 ## App
 
-Lightweight environment helpers.
+Application environment detection utilities.
 
-### App::isLocal(): bool
-Detect whether the current request targets a localhost host or IP.
+### Methods
+
+#### `isLocal(): bool`
+Check if the application is running in a local environment.
 
 ```php
-use PhpHelper\App;
-
 if (App::isLocal()) {
-    error_log('Developer features enabled.');
+    echo "Running locally";
+    // Enable debug mode, detailed logging, etc.
 }
 ```
 
-### App::isCli(): bool
-Detect whether the code executes under CLI or PHPDBG.
+#### `isCli(): bool`
+Determine if the script is running from command line.
 
 ```php
-use PhpHelper\App;
-
 if (App::isCli()) {
-    echo "Running from the terminal" . PHP_EOL;
+    echo "Running from command line";
+    // CLI-specific logic
 }
 ```
 
-### App::isProduction(): bool
-True when neither `isLocal()` nor `isCli()` is true.
+#### `isProduction(): bool`
+Check if running in production environment.
 
 ```php
-use PhpHelper\App;
-
 if (App::isProduction()) {
-    ini_set('display_errors', '0');
+    // Production-specific configuration
+    ini_set('display_errors', 0);
+    error_reporting(0);
 }
 ```
+
+---
 
 ## Arrays
 
-Utility helpers for nested arrays and collection-style operations.
+Comprehensive array manipulation utilities with dot notation support.
 
-### Arrays::get(array $array, string $key, mixed $default = null): mixed
-Fetch a value using dot notation with a default fallback.
+### Methods
 
-```php
-use PhpHelper\Arrays;
-
-$name = Arrays::get(['user' => ['name' => 'Ada']], 'user.name', 'Guest');
-```
-
-### Arrays::set(array &$array, string $key, mixed $value): void
-Set a value using dot notation, creating intermediate arrays as needed.
+#### `get(array $array, string $key, mixed $default = null): mixed`
+Get value using dot notation.
 
 ```php
-use PhpHelper\Arrays;
+$data = [
+    'user' => [
+        'profile' => [
+            'name' => 'John Doe',
+            'email' => 'john@example.com'
+        ]
+    ]
+];
 
-$config = [];
-Arrays::set($config, 'database.host', 'localhost');
+$name = Arrays::get($data, 'user.profile.name');
+echo $name; // "John Doe"
+
+$phone = Arrays::get($data, 'user.profile.phone', 'Not provided');
+echo $phone; // "Not provided"
 ```
 
-### Arrays::has(array $array, string $key): bool
-Check for the existence of a dot-notated key.
+#### `set(array &$array, string $key, mixed $value): void`
+Set value using dot notation.
 
 ```php
-use PhpHelper\Arrays;
-
-$hasEmail = Arrays::has(['user' => ['email' => 'ada@example.com']], 'user.email');
+$data = [];
+Arrays::set($data, 'config.database.host', 'localhost');
+Arrays::set($data, 'config.database.port', 3306);
+// Result: ['config' => ['database' => ['host' => 'localhost', 'port' => 3306]]]
 ```
 
-### Arrays::forget(array &$array, string $key): void
-Remove a value using dot notation.
+#### `has(array $array, string $key): bool`
+Check if key exists using dot notation.
 
 ```php
-use PhpHelper\Arrays;
-
-$data = ['user' => ['password' => 'secret']];
-Arrays::forget($data, 'user.password');
+$data = ['user' => ['name' => 'John']];
+$exists = Arrays::has($data, 'user.name'); // true
+$missing = Arrays::has($data, 'user.email'); // false
 ```
 
-### Arrays::flatten(array $array, int $depth = INF): array
-Flatten nested arrays to a single list up to the provided depth.
+#### `forget(array &$array, string $key): void`
+Remove value using dot notation.
 
 ```php
-use PhpHelper\Arrays;
-
-$flat = Arrays::flatten([1, [2, [3, 4]]], 2); // [1, 2, 3, 4]
+$data = ['user' => ['name' => 'John', 'email' => 'john@example.com']];
+Arrays::forget($data, 'user.email');
+// Result: ['user' => ['name' => 'John']]
 ```
 
-### Arrays::dot(array $array, string $prepend = ''): array
-Return a dot-notated representation of a nested array.
+#### `flatten(array $array, int $depth = INF): array`
+Flatten multi-dimensional array.
 
 ```php
-use PhpHelper\Arrays;
+$nested = [1, [2, 3], [4, [5, 6]]];
+$flat = Arrays::flatten($nested);
+// Result: [1, 2, 3, 4, 5, 6]
 
-$dot = Arrays::dot(['settings' => ['theme' => 'dark']]);
+$partialFlat = Arrays::flatten($nested, 1);
+// Result: [1, 2, 3, 4, [5, 6]]
 ```
 
-### Arrays::only(array $array, array $keys): array
-Return only the specified keys.
+#### `dot(array $array, string $prepend = ''): array`
+Flatten array with dot notation keys.
 
 ```php
-use PhpHelper\Arrays;
-
-$subset = Arrays::only(['id' => 5, 'name' => 'Ada', 'role' => 'admin'], ['id', 'name']);
+$data = [
+    'app' => [
+        'name' => 'MyApp',
+        'version' => '1.0'
+    ]
+];
+$dotted = Arrays::dot($data);
+// Result: ['app.name' => 'MyApp', 'app.version' => '1.0']
 ```
 
-### Arrays::except(array $array, array $keys): array
-Return everything except the specified keys.
+#### `only(array $array, array $keys): array`
+Get only specified keys.
 
 ```php
-use PhpHelper\Arrays;
-
-$filtered = Arrays::except(['id' => 5, 'name' => 'Ada', 'role' => 'admin'], ['role']);
+$data = ['name' => 'John', 'email' => 'john@example.com', 'age' => 30];
+$subset = Arrays::only($data, ['name', 'email']);
+// Result: ['name' => 'John', 'email' => 'john@example.com']
 ```
 
-### Arrays::first(array $array, ?callable $callback = null, mixed $default = null): mixed
-Return the first item or first item matching a callback.
+#### `except(array $array, array $keys): array`
+Get all except specified keys.
 
 ```php
-use PhpHelper\Arrays;
-
-$firstAdmin = Arrays::first($users, fn ($user) => $user['role'] === 'admin');
+$data = ['name' => 'John', 'email' => 'john@example.com', 'password' => 'secret'];
+$safe = Arrays::except($data, ['password']);
+// Result: ['name' => 'John', 'email' => 'john@example.com']
 ```
 
-### Arrays::last(array $array, ?callable $callback = null, mixed $default = null): mixed
-Return the last item or last matching a callback.
+#### `first(array $array, ?callable $callback = null, mixed $default = null): mixed`
+Get first element matching criteria.
 
 ```php
-use PhpHelper\Arrays;
+$numbers = [1, 2, 3, 4, 5];
+$first = Arrays::first($numbers); // 1
 
-$latest = Arrays::last($events, fn ($event) => $event['status'] === 'published');
+$firstEven = Arrays::first($numbers, fn($n) => $n % 2 === 0); // 2
+$firstLarge = Arrays::first($numbers, fn($n) => $n > 10, 'none'); // 'none'
 ```
 
-### Arrays::where(array $array, callable $callback): array
-Filter using a callback receiving value and key.
+#### `pluck(array $array, string $value, ?string $key = null): array`
+Extract a column of values.
 
 ```php
-use PhpHelper\Arrays;
+$users = [
+    ['id' => 1, 'name' => 'John', 'email' => 'john@example.com'],
+    ['id' => 2, 'name' => 'Jane', 'email' => 'jane@example.com']
+];
 
-$active = Arrays::where($users, fn ($user) => $user['active']);
+$names = Arrays::pluck($users, 'name');
+// Result: ['John', 'Jane']
+
+$namesByEmail = Arrays::pluck($users, 'name', 'email');
+// Result: ['john@example.com' => 'John', 'jane@example.com' => 'Jane']
 ```
 
-### Arrays::whereEquals(array $array, string $key, mixed $value): array
-Filter entries whose nested value equals the given value.
+#### `groupBy(array $array, string|callable $key): array`
+Group array by key or callback result.
 
 ```php
-use PhpHelper\Arrays;
+$products = [
+    ['name' => 'Laptop', 'category' => 'Electronics'],
+    ['name' => 'Phone', 'category' => 'Electronics'],
+    ['name' => 'Book', 'category' => 'Education']
+];
 
-$admins = Arrays::whereEquals($users, 'role', 'admin');
+$grouped = Arrays::groupBy($products, 'category');
+// Result: [
+//   'Electronics' => [['name' => 'Laptop', ...], ['name' => 'Phone', ...]],
+//   'Education' => [['name' => 'Book', ...]]
+// ]
 ```
 
-### Arrays::whereIn(array $array, string $key, array $values): array
-Filter entries whose nested value is in the provided list.
+#### `sortBy(array $array, string|callable $key, bool $descending = false): array`
+Sort array by key or callback.
 
 ```php
-use PhpHelper\Arrays;
+$users = [
+    ['name' => 'John', 'age' => 30],
+    ['name' => 'Jane', 'age' => 25],
+    ['name' => 'Bob', 'age' => 35]
+];
 
-$specific = Arrays::whereIn($users, 'id', [1, 2, 3]);
+$sorted = Arrays::sortBy($users, 'age');
+// Sorted by age ascending
+
+$sortedDesc = Arrays::sortBy($users, 'age', true);
+// Sorted by age descending
 ```
 
-### Arrays::whereNotIn(array $array, string $key, array $values): array
-Filter entries whose nested value is not in the provided list.
+#### `random(array $array, int $number = 1): mixed`
+Get random element(s).
 
 ```php
-use PhpHelper\Arrays;
-
-$others = Arrays::whereNotIn($users, 'id', [1, 2, 3]);
+$colors = ['red', 'green', 'blue', 'yellow'];
+$randomColor = Arrays::random($colors); // e.g., 'green'
+$randomColors = Arrays::random($colors, 2); // e.g., ['red', 'blue']
 ```
 
-### Arrays::pluck(array $array, string $value, ?string $key = null): array
-Extract values (and optional keys) from an array of arrays.
+#### `chunk(array $array, int $size, bool $preserveKeys = false): array`
+Split array into chunks.
 
 ```php
-use PhpHelper\Arrays;
-
-$usernames = Arrays::pluck($users, 'profile.username');
+$numbers = [1, 2, 3, 4, 5, 6, 7];
+$chunks = Arrays::chunk($numbers, 3);
+// Result: [[1, 2, 3], [4, 5, 6], [7]]
 ```
 
-### Arrays::keyBy(array $array, string|callable $key): array
-Index the collection by a key or computed callback.
-
-```php
-use PhpHelper\Arrays;
-
-$usersByEmail = Arrays::keyBy($users, 'email');
-```
-
-### Arrays::groupBy(array $array, string|callable $key): array
-Group values by the given key or callback.
-
-```php
-use PhpHelper\Arrays;
-
-$grouped = Arrays::groupBy($orders, fn ($order) => $order['status']);
-```
-
-### Arrays::sortBy(array $array, string|callable $key, bool $descending = false): array
-Return a new array sorted by a key or callback.
-
-```php
-use PhpHelper\Arrays;
-
-$sorted = Arrays::sortBy($users, 'profile.last_login', true);
-```
-
-### Arrays::isAssoc(array $array): bool
-Check whether the array has non-sequential keys.
-
-```php
-use PhpHelper\Arrays;
-
-$isAssoc = Arrays::isAssoc(['id' => 1, 'name' => 'Ada']);
-```
-
-### Arrays::isSequential(array $array): bool
-Check whether the array uses sequential numeric keys.
-
-```php
-use PhpHelper\Arrays;
-
-$isSequential = Arrays::isSequential(['first', 'second']);
-```
-
-### Arrays::random(array $array, int $number = 1): mixed
-Pick one or many random elements.
-
-```php
-use PhpHelper\Arrays;
-
-$randomUser = Arrays::random($users);
-$twoUsers = Arrays::random($users, 2);
-```
-
-### Arrays::shuffle(array $array): array
-Shuffle the array while preserving keys.
-
-```php
-use PhpHelper\Arrays;
-
-$shuffled = Arrays::shuffle(['a' => 1, 'b' => 2, 'c' => 3]);
-```
-
-### Arrays::chunk(array $array, int $size, bool $preserveKeys = false): array
-Split the array into equally sized chunks.
-
-```php
-use PhpHelper\Arrays;
-
-$chunks = Arrays::chunk(range(1, 6), 2);
-```
-
-### Arrays::collapse(array $array): array
-Merge an array of arrays into one flat array.
-
-```php
-use PhpHelper\Arrays;
-
-$collapsed = Arrays::collapse([[1, 2], [3, 4]]);
-```
-
-### Arrays::crossJoin(array ...$arrays): array
-Generate the Cartesian product of multiple arrays.
-
-```php
-use PhpHelper\Arrays;
-
-$product = Arrays::crossJoin(['S', 'M'], ['Red', 'Blue']);
-```
-
-### Arrays::divide(array $array): array
-Return `[keys, values]` arrays.
-
-```php
-use PhpHelper\Arrays;
-
-[$keys, $values] = Arrays::divide(['id' => 1, 'name' => 'Ada']);
-```
-
-### Arrays::replaceRecursive(array $array, array ...$replacements): array
-Recursively merge arrays, overriding existing keys.
-
-```php
-use PhpHelper\Arrays;
-
-$merged = Arrays::replaceRecursive(['db' => ['host' => 'localhost']], ['db' => ['port' => 3306]]);
-```
-
-### Arrays::duplicates(array $array): array
-Return values that appear more than once along with their counts.
-
-```php
-use PhpHelper\Arrays;
-
-$dupes = Arrays::duplicates(['a', 'b', 'a']);
-```
-
-### Arrays::map(array $array, callable $callback): array
-Apply a callback while preserving keys.
-
-```php
-use PhpHelper\Arrays;
-
-$upper = Arrays::map(['a' => 'foo'], fn ($value) => strtoupper($value));
-```
-
-### Arrays::mapRecursive(array $array, callable $callback): array
-Recursively map every scalar value.
-
-```php
-use PhpHelper\Arrays;
-
-$trimmed = Arrays::mapRecursive(['name' => ' Ada '], fn ($value) => is_string($value) ? trim($value) : $value);
-```
-
-### Arrays::wrap(mixed $value): array
-Wrap a value in an array unless it is already an array.
-
-```php
-use PhpHelper\Arrays;
-
-$wrapped = Arrays::wrap('example');
-```
-
-### Arrays::toQuery(array $array): string
-Build a RFC 3986 encoded query string.
-
-```php
-use PhpHelper\Arrays;
-
-$queryString = Arrays::toQuery(['page' => 2, 'filter' => 'active']);
-```
-
-### Arrays::fromQuery(string $query): array
-Parse a query string into an array.
-
-```php
-use PhpHelper\Arrays;
-
-$params = Arrays::fromQuery('page=2&filter=active');
-```
+---
 
 ## AuthManager
 
-Simple authentication helper built on top of the `DB` class and PHP sessions.
-
-### AuthManager::init(array $config = []): void
-Initialise the authentication subsystem. Requires an active database connection.
-
-**Options**
-- `table` (string) Users table name (default `users`).
-- `email_column` (string) Email/username column (default `email`).
-- `password_column` (string) Password hash column (default `password`).
-- `primary_key` (string) Primary key column (default `id`).
-- `sessions` (bool) Whether to persist to PHP sessions.
-- `session_key` (string) Session key used to store the user payload (default `_auth_user`).
-- `remember_me` (bool) Enable remember-me cookies (default `true`).
-- `remember_cookie` (string) Cookie name (default `phphelper_remember`).
-- `remember_duration` (int) Cookie lifetime in seconds (default 360 days).
-- `remember_secret` (string) HMAC secret for remember-me tokens (auto-generated when omitted).
-- `remember_options` (array) Cookie options (`path`, `domain`, `secure`, `httponly`, `samesite`).
-
-```php
-use PhpHelper\AuthManager;
-use PhpHelper\DB;
-
-DB::sqlite(':memory:');
-AuthManager::init(['sessions' => true]);
-```
-
-### AuthManager::createUsersTable(array $options = []): void
-Create a users table with sensible defaults based on the current PDO driver.
-
-**Options**
-- `table` (string) Override the table name before creation.
-- `email_column` (string) Customise the email column name.
-- `password_column` (string) Customise the password hash column name.
-- `primary_key` (string) Override the primary key column name.
-- `extra_columns` (array<string,string>) Extra column definitions appended to the table.
-
-```php
-use PhpHelper\AuthManager;
-
-AuthManager::createUsersTable(['extra_columns' => ['name' => 'TEXT']]);
-```
-
-### AuthManager::login(string $email, string $password, bool $remember = false): ?array
-Attempt to authenticate a user by email and password.
-
-```php
-use PhpHelper\AuthManager;
-
-$user = AuthManager::login('ada@example.com', 'secret', true);
-```
-
-### AuthManager::register(string $email, string $password, array $attributes = []): array
-Create a new user record and automatically log them in.
-
-```php
-use PhpHelper\AuthManager;
-
-$created = AuthManager::register('ada@example.com', 'secret', ['name' => 'Ada']);
-```
-
-### AuthManager::user(): ?array
-Return the sanitised authenticated user payload or `null`.
-
-```php
-use PhpHelper\AuthManager;
-
-$currentUser = AuthManager::user();
-```
-
-### AuthManager::isLoggedIn(): bool
-Quick boolean check for an authenticated user.
-
-```php
-use PhpHelper\AuthManager;
-
-if (!AuthManager::isLoggedIn()) {
-    // redirect to login
-}
-```
-
-## Config
-
-Key/value configuration storage backed by the database.
-
-### Config::init(array $config = []): void
-Initialise the helper (requires an existing database connection).
-
-**Options**
-- `table` (string) Table name, default `config`.
-- `key_column` (string) Key column name, default `config_key`.
-- `value_column` (string) Value column name, default `config_value`.
-
-```php
-use PhpHelper\Config;
-use PhpHelper\DB;
-
-DB::sqlite(':memory:');
-Config::init();
-```
-
-### Config::createConfigTable(array $options = []): void
-Create the configuration table using the current settings.
-
-**Options**
-- `table` (string) Override table name during creation.
-- `key_column` (string) Override key column name.
-- `value_column` (string) Override value column name.
-
-```php
-use PhpHelper\Config;
-
-Config::createConfigTable();
-```
-
-### Config::set(string $key, ?string $value): void
-Store or update a value.
-
-```php
-use PhpHelper\Config;
-
-Config::set('mail.driver', 'smtp');
-```
-
-### Config::get(string $key, ?string $default = null): ?string
-Retrieve a value or return the default when missing.
-
-```php
-use PhpHelper\Config;
-
-$driver = Config::get('mail.driver', 'log');
-```
-
-### Config::has(string $key): bool
-Determine whether a key exists.
-
-```php
-use PhpHelper\Config;
-
-if (!Config::has('feature.chat')) {
-    Config::set('feature.chat', 'off');
-}
-```
-
-### Config::delete(string $key): bool
-Remove a key. Returns whether a row was deleted.
-
-```php
-use PhpHelper\Config;
-
-Config::delete('temporary.flag');
-```
-
-### Config::all(): array
-Return all configuration pairs ordered by key.
-
-```php
-use PhpHelper\Config;
-
-$settings = Config::all();
-```
-
-## DB
-
-Thin wrapper around PDO that standardises common database operations.
-
-### DB::connect(string $dsn, ?string $username = null, ?string $password = null, array $options = []): void
-Establish a PDO connection with sensible defaults (exceptions, associative fetch mode, native prepares).
-
-```php
-use PhpHelper\DB;
-
-DB::connect('mysql:host=127.0.0.1;dbname=app', 'root', 'secret');
-```
-
-### DB::mysql(string $dbname, ?string $username = null, ?string $password = null, array $options = []): void
-Convenience connector for MySQL / MariaDB.
-
-**Options**
-- `host` (string) Hostname, default `127.0.0.1`.
-- `port` (int|string|null) TCP port.
-- `charset` (?string) Character set, default `utf8mb4`.
-- `unix_socket` (?string) Path to a Unix socket.
-- `attributes` (array) Extra PDO attributes.
-
-```php
-use PhpHelper\DB;
-
-DB::mysql('app', 'appuser', 'secret', ['host' => 'db', 'charset' => 'utf8mb4']);
-```
-
-### DB::pgsql(string $dbname, ?string $username = null, ?string $password = null, array $options = []): void
-Convenience connector for PostgreSQL.
-
-**Options**
-- `host` (string) Hostname, default `127.0.0.1`.
-- `port` (int|string|null) Port number.
-- `sslmode` (?string) SSL mode string.
-- `charset` (?string) Client encoding (applied via DSN options).
-- `application_name` (?string) Application name.
-- `attributes` (array) Extra PDO attributes.
-
-```php
-use PhpHelper\DB;
-
-DB::pgsql('app', 'appuser', 'secret', ['sslmode' => 'require']);
-```
-
-### DB::sqlite(string $pathOrDsn = ':memory:', ?string $username = null, ?string $password = null, array $options = []): void
-Convenience connector for SQLite files or in-memory databases.
-
-**Options**
-- `memory` (bool) Force `:memory:` usage.
-- `attributes` (array) Extra PDO attributes.
-
-```php
-use PhpHelper\DB;
-
-DB::sqlite(__DIR__ . '/var/app.sqlite');
-```
-
-### DB::connected(): bool
-Check whether a PDO instance has been initialised.
-
-```php
-use PhpHelper\DB;
-
-if (!DB::connected()) {
-    DB::sqlite(':memory:');
-}
-```
-
-### DB::pdo(): PDO
-Return the underlying PDO instance (throws when not connected).
-
-```php
-use PhpHelper\DB;
-
-$pdo = DB::pdo();
-```
-
-### DB::disconnect(): void
-Drop the stored PDO connection.
-
-```php
-use PhpHelper\DB;
-
-DB::disconnect();
-```
-
-### DB::query(string $sql, array $params = []): PDOStatement
-Prepare and execute a statement, returning the `PDOStatement`.
-
-```php
-use PhpHelper\DB;
-
-$stmt = DB::query('SELECT * FROM users WHERE id = :id', ['id' => 1]);
-```
-
-### DB::execute(string $sql, array $params = []): int
-Execute a statement and return the affected row count.
-
-```php
-use PhpHelper\DB;
-
-$deleted = DB::execute('DELETE FROM sessions WHERE expires_at < :now', ['now' => time()]);
-```
-
-### DB::getRow(string $sql, array $params = []): ?array
-Fetch the first row as an associative array or `null`.
-
-```php
-use PhpHelper\DB;
-
-$user = DB::getRow('SELECT * FROM users WHERE email = :email', ['email' => 'ada@example.com']);
-```
-
-### DB::getRows(string $sql, array $params = []): array
-Fetch all rows as an array of associative arrays.
-
-```php
-use PhpHelper\DB;
-
-$users = DB::getRows('SELECT * FROM users ORDER BY created_at DESC');
-```
-
-### DB::getValue(string $sql, array $params = []): mixed
-Fetch the first column of the first row.
-
-```php
-use PhpHelper\DB;
-
-$count = DB::getValue('SELECT COUNT(*) FROM users WHERE active = 1');
-```
-
-### DB::count(string $table, string $where = '', array $params = []): int
-Count rows in a table with an optional WHERE clause.
-
-```php
-use PhpHelper\DB;
-
-$activeUsers = DB::count('users', 'active = :active', ['active' => 1]);
-```
-
-### DB::insert(string $table, array $data): string
-Insert a row and return the last insert id (as a string per PDO contract).
-
-```php
-use PhpHelper\DB;
-
-$id = DB::insert('users', ['email' => 'ada@example.com', 'password' => 'hash']);
-```
-
-### DB::upsert(string $table, array $data, array|string $conflictColumns, ?array $updateColumns = null): void
-Insert or update rows using native driver capabilities, falling back to a transactional emulation.
-
-```php
-use PhpHelper\DB;
-
-DB::upsert('settings', ['key' => 'theme', 'value' => 'dark'], 'key');
-```
-
-### DB::update(string $table, array $data, string $where, array $params = []): int
-Update rows matching the WHERE clause; returns the number of affected rows.
-
-```php
-use PhpHelper\DB;
-
-$updated = DB::update('users', ['last_login' => time()], 'id = :id', ['id' => 5]);
-```
-
-### DB::delete(string $table, string $where, array $params = []): int
-Delete rows matching the WHERE clause; returns the number of affected rows.
-
-```php
-use PhpHelper\DB;
-
-$deleted = DB::delete('users', 'inactive = 1');
-```
-
-### DB::beginTransaction(): void
-Begin a transaction on the current PDO connection.
-
-```php
-use PhpHelper\DB;
-
-DB::beginTransaction();
-```
-
-### DB::commit(): void
-Commit the current transaction.
-
-```php
-use PhpHelper\DB;
-
-DB::commit();
-```
-
-### DB::rollBack(): void
-Roll back the current transaction.
-
-```php
-use PhpHelper\DB;
-
-DB::rollBack();
-```
-
-### DB::transaction(callable $callback): mixed
-Execute a callback within a transaction, committing on success and rolling back on exception.
-
-```php
-use PhpHelper\DB;
-
-$result = DB::transaction(function () {
-    DB::insert('logs', ['message' => 'Example']);
-    return true;
-});
-```
-
-### DB::quoteIdentifier(string $identifier): string
-Quote identifiers (table/column names) for the active driver.
-
-```php
-use PhpHelper\DB;
-
-$column = DB::quoteIdentifier('users.email');
-```
-
-## Date
-
-Date/time convenience helpers.
-
-### Date::ago(DateTimeInterface|int|string $timestamp, bool $full = false): string
-Generate a human-readable relative time string.
-
-```php
-use PhpHelper\Date;
-
-echo Date::ago('-2 hours'); // "2 hours ago"
-```
-
-### Date::format(DateTimeInterface|int|string $timestamp, string $format = 'datetime', ?string $timezone = null): string
-Apply preset or custom formatting with optional timezone conversion.
-
-```php
-use PhpHelper\Date;
-
-$iso = Date::format('2024-01-01 12:00', 'iso', 'Europe/London');
-```
-
-### Date::timestamp(DateTimeInterface|int|string|null $value = null, ?string $timezone = null): int
-Normalise a DateTime, timestamp, or parseable string into a Unix timestamp.
-
-```php
-use PhpHelper\Date;
-
-$timestamp = Date::timestamp('next monday', 'UTC');
-```
-
-## Files
-
-Filesystem helpers for common read/write tasks.
-
-### Files::read(string $path): string|false
-Read a file, returning `false` when missing.
-
-```php
-use PhpHelper\Files;
-
-$contents = Files::read(__DIR__ . '/storage/app.log');
-```
-
-### Files::write(string $path, string $content, int $flags = 0): int|false
-Write content to disk (creating directories automatically).
-
-```php
-use PhpHelper\Files;
-
-Files::write(__DIR__ . '/storage/app.log', "starting application\n");
-```
-
-### Files::append(string $path, string $content): int|false
-Append content to a file.
-
-```php
-use PhpHelper\Files;
-
-Files::append(__DIR__ . '/storage/app.log', "tick\n");
-```
-
-### Files::delete(string $path): bool
-Delete a file if it exists.
-
-```php
-use PhpHelper\Files;
-
-Files::delete(__DIR__ . '/storage/temp.txt');
-```
-
-### Files::copy(string $source, string $dest): bool
-Copy a file (creating destination directories when required).
-
-```php
-use PhpHelper\Files;
-
-Files::copy(__DIR__ . '/storage/app.log', __DIR__ . '/backup/app.log');
-```
-
-### Files::move(string $source, string $dest): bool
-Move/rename a file.
-
-```php
-use PhpHelper\Files;
-
-Files::move(__DIR__ . '/storage/temp.txt', __DIR__ . '/storage/archive/temp.txt');
-```
-
-### Files::exists(string $path): bool
-Determine whether a regular file exists.
-
-```php
-use PhpHelper\Files;
-
-if (Files::exists(__DIR__ . '/storage/app.log')) {
-    // rotate log
-}
-```
-
-### Files::size(string $path): int|false
-Retrieve file size in bytes.
-
-```php
-use PhpHelper\Files;
-
-$bytes = Files::size(__DIR__ . '/storage/app.log');
-```
-
-### Files::extension(string $path): string
-Return the lowercase file extension.
-
-```php
-use PhpHelper\Files;
-
-$ext = Files::extension('photo.JPG'); // "jpg"
-```
-
-### Files::mimeType(string $path): string|false
-Detect the MIME type when the file exists.
-
-```php
-use PhpHelper\Files;
-
-$mime = Files::mimeType(__DIR__ . '/storage/app.log');
-```
-
-### Files::modifiedTime(string $path): int|false
-Retrieve the last modified time as a Unix timestamp.
-
-```php
-use PhpHelper\Files;
-
-$mtime = Files::modifiedTime(__DIR__ . '/storage/app.log');
-```
-
-### Files::createDirectory(string $path, int $permissions = 0755): bool
-Create a directory recursively.
-
-```php
-use PhpHelper\Files;
-
-Files::createDirectory(__DIR__ . '/storage/cache');
-```
-
-### Files::deleteDirectory(string $path): bool
-Delete a directory recursively.
-
-```php
-use PhpHelper\Files;
-
-Files::deleteDirectory(__DIR__ . '/storage/cache');
-```
-
-### Files::listFiles(string $path, string $pattern = '*'): array
-List files matching a glob pattern.
-
-```php
-use PhpHelper\Files;
-
-$logs = Files::listFiles(__DIR__ . '/storage', '*.log');
-```
-
-### Files::listDirectories(string $path): array
-List immediate sub-directories.
-
-```php
-use PhpHelper\Files;
-
-$directories = Files::listDirectories(__DIR__ . '/storage');
-```
-
-### Files::readJson(string $path): mixed
-Decode a JSON file, returning `false` when the file is missing.
-
-```php
-use PhpHelper\Files;
-
-$config = Files::readJson(__DIR__ . '/storage/config.json');
-```
-
-### Files::writeJson(string $path, mixed $data, int $flags = JSON_PRETTY_PRINT): int|false
-Encode data as JSON and write it to disk.
-
-```php
-use PhpHelper\Files;
-
-Files::writeJson(__DIR__ . '/storage/config.json', ['debug' => true]);
-```
-
-### Files::readCsv(string $path, string $delimiter = ',', string $enclosure = '"', string $escape = '\\'): array|false
-Read all rows from a CSV file.
-
-```php
-use PhpHelper\Files;
-
-$rows = Files::readCsv(__DIR__ . '/storage/users.csv');
-```
-
-### Files::writeCsv(string $path, array $data, string $delimiter = ',', string $enclosure = '"', string $escape = '\\'): bool
-Write rows to a CSV file.
-
-```php
-use PhpHelper\Files;
-
-Files::writeCsv(__DIR__ . '/storage/users.csv', [["id", "email"], [1, 'ada@example.com']]);
-```
-
-### Files::hash(string $path, string $algo = 'sha256'): string|false
-Compute a hash for the file contents.
-
-```php
-use PhpHelper\Files;
-
-$checksum = Files::hash(__DIR__ . '/storage/app.log');
-```
-
-### Files::isAbsolute(string $path): bool
-Determine whether the path is absolute on Unix or Windows.
-
-```php
-use PhpHelper\Files;
-
-$isAbsolute = Files::isAbsolute('/var/www');
-```
-
-### Files::normalizePath(string $path): string
-Normalise path separators to the current platform.
-
-```php
-use PhpHelper\Files;
-
-$normalized = Files::normalizePath('storage\\logs/app.log');
-```
-
-### Files::joinPaths(string ...$parts): string
-Join path segments using the platform-specific separator.
-
-```php
-use PhpHelper\Files;
-
-$fullPath = Files::joinPaths(__DIR__, 'storage', 'logs');
-```
-
-## Format
-
-Formatting helpers for numbers, durations, and JSON.
-
-### Format::bytes(int $bytes, int $precision = 2, string $system = 'binary', ?array $units = null): string
-Convert a byte count into a human readable size.
-
-```php
-use PhpHelper\Format;
-
-echo Format::bytes(1_572_864); // "1.50 MB"
-```
-
-### Format::number(float|int $value, int $decimals = 0, string $decimalPoint = '.', string $thousandsSep = ','): string
-Wrapper around `number_format()` with explicit defaults.
-
-```php
-use PhpHelper\Format;
-
-echo Format::number(12345.678, 2); // "12,345.68"
-```
-
-### Format::currency(float $amount, string $currency = 'USD', ?string $locale = null, ?int $precision = null): string
-Format a currency amount using `NumberFormatter` when available, otherwise fallback formatting.
-
-```php
-use PhpHelper\Format;
-
-echo Format::currency(199.99, 'EUR', 'de_DE');
-```
-
-### Format::percent(float $value, int $precision = 0, bool $fromFraction = true): string
-Create a percent string, optionally treating the value as a fraction.
-
-```php
-use PhpHelper\Format;
-
-echo Format::percent(0.256, 1); // "25.6%"
-```
-
-### Format::shortNumber(float|int $value, int $precision = 1): string
-Produce abbreviations such as K, M, B, T.
-
-```php
-use PhpHelper\Format;
-
-echo Format::shortNumber(1250000); // "1.2M"
-```
-
-### Format::duration(int $seconds, bool $compact = true): string
-Render a duration as compact (`1h 2m`) or verbose (`1 hour, 2 minutes`).
-
-```php
-use PhpHelper\Format;
-
-echo Format::duration(3723); // "1h 2m 3s"
-```
-
-### Format::hms(int $seconds, bool $withDays = false): string
-Return a clock-style string (`HH:MM:SS`) optionally prefixed with days.
-
-```php
-use PhpHelper\Format;
-
-echo Format::hms(3661); // "01:01:01"
-```
-
-### Format::ordinal(int $number): string
-Append the English ordinal suffix (`st`, `nd`, `rd`, `th`).
-
-```php
-use PhpHelper\Format;
-
-echo Format::ordinal(23); // "23rd"
-```
-
-### Format::parseBytes(string $size): int
-Parse human readable sizes such as `"2M"` or `"1.5 GiB"` into bytes.
-
-```php
-use PhpHelper\Format;
-
-$bytes = Format::parseBytes('1.5 GiB');
-```
-
-### Format::bool(mixed $value, string $true = 'Yes', string $false = 'No', string $null = ''): string
-Normalise a value to a human readable boolean label.
-
-```php
-use PhpHelper\Format;
-
-echo Format::bool('on'); // "Yes"
-```
-
-### Format::json(mixed $value, bool $pretty = true, int $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES): string
-Encode a value as JSON for display (pretty or compact) with safer escaping.
-
-```php
-use PhpHelper\Format;
-
-$json = Format::json(['name' => 'Ada', 'active' => true]);
-```
-
-## Http
-
-HTTP response helpers for redirects, downloads, JSON replies, and client inspection.
-
-### Http::redirect(string $url, int $statusCode = 302, bool $exit = true): void
-Send a redirect either via headers or a client-side fallback when headers are already sent.
-
-```php
-use PhpHelper\Http;
-
-Http::redirect('/dashboard');
-```
-
-### Http::download(string $filename, string $mimetype = 'application/octet-stream')
-Stream a file to the browser as an attachment.
-
-```php
-use PhpHelper\Http;
-
-Http::download(__DIR__ . '/storage/report.pdf', 'application/pdf');
-```
-
-### Http::json(mixed $data, int $status = 200, array $headers = []): void
-Emit a JSON response with optional status and extra headers.
-
-```php
-use PhpHelper\Http;
-
-Http::json(['ok' => true], 201, ['X-Request-Id' => 'abc123']);
-```
-
-### Http::clientInfo(): array
-Gather best-effort client metadata (IP chain, UA, device flags, request info).
-
-```php
-use PhpHelper\Http;
-
-$client = Http::clientInfo();
-$primaryIp = $client['ip'];
-```
-
-## Logs
-
-Database-backed structured logging helper.
-
-### Logs::configure(array $config = []): void
-Configure the logger using a table name and default fields.
-
-**Options**
-- `table` (string) Table used for log storage (default `logs`).
-- `defaults` (array<string, mixed>) Key/value pairs merged into every record.
-
-```php
-use PhpHelper\Logs;
-
-Logs::configure([
-    'table' => 'app_logs',
-    'defaults' => ['app' => 'frontend'],
+Complete user authentication and session management system.
+
+### Configuration Options
+
+```php
+AuthManager::init([
+    'table' => 'users',                    // Users table name
+    'email_column' => 'email',             // Email column name
+    'password_column' => 'password',       // Password column name
+    'primary_key' => 'id',                 // Primary key column
+    'sessions' => true,                    // Enable session storage
+    'session_key' => '_auth_user',         // Session key
+    'remember_me' => true,                 // Enable remember me
+    'remember_cookie' => 'phphelper_remember', // Cookie name
+    'remember_duration' => 31104000,       // Cookie lifetime (360 days)
+    'remember_secret' => 'your-secret',    // HMAC secret
+    'remember_options' => [                // Cookie options
+        'path' => '/',
+        'domain' => null,
+        'secure' => false,
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]
 ]);
 ```
 
-### Logs::setTable(string $table): void
-Change the target table for subsequent log writes.
+### Methods
+
+#### `init(array $config = []): void`
+Initialize authentication manager.
 
 ```php
-use PhpHelper\Logs;
+// Basic setup
+DB::sqlite(':memory:');
+AuthManager::init();
 
-Logs::setTable('audit_logs');
+// Custom configuration
+AuthManager::init([
+    'table' => 'members',
+    'email_column' => 'username',
+    'remember_duration' => 86400 * 7, // 7 days
+    'remember_secret' => 'my-secret-key'
+]);
 ```
 
-### Logs::setDefaults(array $defaults): void
-Merge additional default context into log records.
+#### `createUsersTable(array $options = []): void`
+Create users table with appropriate schema.
 
 ```php
-use PhpHelper\Logs;
+// Create default table
+AuthManager::createUsersTable();
 
-Logs::setDefaults(['environment' => 'testing']);
+// Custom table with extra columns
+AuthManager::createUsersTable([
+    'table' => 'members',
+    'extra_columns' => [
+        'first_name' => 'VARCHAR(100)',
+        'last_name' => 'VARCHAR(100)',
+        'is_active' => 'BOOLEAN DEFAULT TRUE'
+    ]
+]);
 ```
 
-### Logs::clearDefaults(): void
-Remove any previously configured defaults.
+#### `register(string $email, string $password, array $attributes = []): array`
+Register new user.
 
 ```php
-use PhpHelper\Logs;
+// Basic registration
+$user = AuthManager::register('john@example.com', 'password123');
+echo $user['id']; // User ID
 
-Logs::clearDefaults();
+// With additional attributes
+$user = AuthManager::register(
+    'jane@example.com',
+    'secure_password',
+    [
+        'first_name' => 'Jane',
+        'last_name' => 'Doe',
+        'role' => 'admin'
+    ]
+);
 ```
 
-### Logs::log(string $level, string $message, array $context = [], array $meta = []): string
-Persist a log entry and return its primary key.
+#### `login(string $email, string $password, bool $remember = false): ?array`
+Authenticate user.
 
 ```php
-use PhpHelper\Logs;
+// Basic login
+$user = AuthManager::login('john@example.com', 'password123');
+if ($user) {
+    echo "Welcome, " . $user['email'];
+} else {
+    echo "Invalid credentials";
+}
 
-$logId = Logs::log('info', 'Background job dispatched', ['job' => 'SyncUsers']);
+// With remember me
+$user = AuthManager::login('john@example.com', 'password123', true);
 ```
 
-### Logs::debug(string $message, array $context = [], array $meta = []): string
-Shortcut for `Logs::log('debug', ...)`.
+#### `user(): ?array`
+Get currently authenticated user.
 
 ```php
-use PhpHelper\Logs;
-
-Logs::debug('Cache miss', ['key' => 'users:1']);
+$currentUser = AuthManager::user();
+if ($currentUser) {
+    echo "Logged in as: " . $currentUser['email'];
+} else {
+    echo "Not logged in";
+}
 ```
 
-### Logs::info(string $message, array $context = [], array $meta = []): string
-Shortcut for an `info` level log.
+#### `isLoggedIn(): bool`
+Check if user is authenticated.
 
 ```php
-use PhpHelper\Logs;
-
-Logs::info('User signed in', ['user_id' => 5]);
+if (AuthManager::isLoggedIn()) {
+    // Show user dashboard
+} else {
+    // Redirect to login
+}
 ```
 
-### Logs::notice(string $message, array $context = [], array $meta = []): string
-Shortcut for a `notice` level log.
+---
+
+## Config
+
+Database-backed configuration management system.
+
+### Configuration Options
 
 ```php
-use PhpHelper\Logs;
-
-Logs::notice('Slow response detected', ['route' => '/api']);
+Config::init([
+    'table' => 'config',           // Configuration table name
+    'key_column' => 'config_key',  // Key column name
+    'value_column' => 'config_value' // Value column name
+]);
 ```
 
-### Logs::warning(string $message, array $context = [], array $meta = []): string
-Shortcut for a `warning` level log.
+### Methods
+
+#### `init(array $config = []): void`
+Initialize configuration system.
 
 ```php
-use PhpHelper\Logs;
+DB::sqlite(':memory:');
+Config::init();
 
-Logs::warning('Disk space low', ['free_mb' => 512]);
+// Custom table structure
+Config::init([
+    'table' => 'app_settings',
+    'key_column' => 'setting_name',
+    'value_column' => 'setting_value'
+]);
 ```
 
-### Logs::error(string $message, array $context = [], array $meta = []): string
-Shortcut for an `error` level log.
+#### `createConfigTable(array $options = []): void`
+Create configuration table.
 
 ```php
-use PhpHelper\Logs;
-
-Logs::error('Order failed', ['order_id' => 1234]);
+Config::createConfigTable();
 ```
 
-### Logs::critical(string $message, array $context = [], array $meta = []): string
-Shortcut for a `critical` level log.
+#### `set(string $key, ?string $value): void`
+Set configuration value.
 
 ```php
-use PhpHelper\Logs;
-
-Logs::critical('Primary database unavailable');
+Config::set('app.name', 'My Application');
+Config::set('app.version', '1.0.0');
+Config::set('database.host', 'localhost');
 ```
 
-### Logs::alert(string $message, array $context = [], array $meta = []): string
-Shortcut for an `alert` level log.
+#### `get(string $key, ?string $default = null): ?string`
+Get configuration value.
 
 ```php
-use PhpHelper\Logs;
-
-Logs::alert('Security breach detected', ['ip' => '203.0.113.5']);
+$appName = Config::get('app.name', 'Default App');
+$dbHost = Config::get('database.host');
+$missing = Config::get('nonexistent.key', 'fallback');
 ```
 
-### Logs::emergency(string $message, array $context = [], array $meta = []): string
-Shortcut for an `emergency` level log.
+#### `has(string $key): bool`
+Check if configuration key exists.
 
 ```php
-use PhpHelper\Logs;
-
-Logs::emergency('System shutdown imminent');
+if (Config::has('app.debug')) {
+    $debug = Config::get('app.debug');
+}
 ```
 
-### Logs::createLogsTable(?string $table = null): void
-Create the logs table for MySQL or SQLite drivers.
+#### `delete(string $key): bool`
+Remove configuration value.
 
 ```php
-use PhpHelper\Logs;
-
-Logs::createLogsTable();
+$deleted = Config::delete('old.setting');
+if ($deleted) {
+    echo "Setting removed";
+}
 ```
+
+#### `all(): array`
+Get all configuration values.
+
+```php
+$allConfig = Config::all();
+foreach ($allConfig as $key => $value) {
+    echo "$key = $value\n";
+}
+```
+
+---
+
+## DB
+
+Database abstraction layer providing clean PDO interface.
+
+### Configuration Options
+
+```php
+// MySQL connection options
+DB::mysql('database_name', 'username', 'password', [
+    'host' => '127.0.0.1',        // Database host
+    'port' => 3306,               // Port number
+    'charset' => 'utf8mb4',       // Character set
+    'unix_socket' => null,        // Unix socket path
+    'attributes' => [             // PDO attributes
+        PDO::ATTR_TIMEOUT => 30
+    ]
+]);
+
+// PostgreSQL connection options  
+DB::pgsql('database_name', 'username', 'password', [
+    'host' => '127.0.0.1',
+    'port' => 5432,
+    'sslmode' => 'prefer',        // SSL mode
+    'charset' => 'utf8',
+    'application_name' => 'MyApp',
+    'attributes' => []
+]);
+
+// SQLite connection options
+DB::sqlite('/path/to/database.db', null, null, [
+    'memory' => false,            // Use in-memory database
+    'attributes' => []
+]);
+```
+
+### Methods
+
+#### `connect(string $dsn, ?string $username = null, ?string $password = null, array $options = []): void`
+Establish PDO connection.
+
+```php
+// Manual DSN
+DB::connect('mysql:host=localhost;dbname=test', 'user', 'pass');
+```
+
+#### `mysql(string $dbname, ?string $username = null, ?string $password = null, array $options = []): void`
+Connect to MySQL/MariaDB.
+
+```php
+// Basic connection
+DB::mysql('myapp', 'root', 'password');
+
+// With custom host and port
+DB::mysql('myapp', 'user', 'pass', [
+    'host' => 'db.example.com',
+    'port' => 3307,
+    'charset' => 'utf8mb4'
+]);
+
+// Unix socket connection
+DB::mysql('myapp', 'user', 'pass', [
+    'unix_socket' => '/var/run/mysqld/mysqld.sock'
+]);
+```
+
+#### `pgsql(string $dbname, ?string $username = null, ?string $password = null, array $options = []): void`
+Connect to PostgreSQL.
+
+```php
+DB::pgsql('myapp', 'postgres', 'password', [
+    'host' => 'localhost',
+    'port' => 5432,
+    'sslmode' => 'require'
+]);
+```
+
+#### `sqlite(string $pathOrDsn = ':memory:', ?string $username = null, ?string $password = null, array $options = []): void`
+Connect to SQLite.
+
+```php
+// File database
+DB::sqlite('/path/to/database.db');
+
+// In-memory database
+DB::sqlite(':memory:');
+// or
+DB::sqlite('', null, null, ['memory' => true]);
+```
+
+#### `query(string $sql, array $params = []): PDOStatement`
+Execute query and return statement.
+
+```php
+$stmt = DB::query('SELECT * FROM users WHERE age > ?', [18]);
+while ($row = $stmt->fetch()) {
+    echo $row['name'] . "\n";
+}
+```
+
+#### `getRow(string $sql, array $params = []): ?array`
+Get single row.
+
+```php
+$user = DB::getRow('SELECT * FROM users WHERE id = ?', [123]);
+if ($user) {
+    echo $user['name'];
+}
+```
+
+#### `getRows(string $sql, array $params = []): array`
+Get all matching rows.
+
+```php
+$users = DB::getRows('SELECT * FROM users WHERE active = ?', [1]);
+foreach ($users as $user) {
+    echo $user['name'] . "\n";
+}
+```
+
+#### `getValue(string $sql, array $params = []): mixed`
+Get single scalar value.
+
+```php
+$count = DB::getValue('SELECT COUNT(*) FROM users');
+$name = DB::getValue('SELECT name FROM users WHERE id = ?', [123]);
+```
+
+#### `insert(string $table, array $data): string`
+Insert row and return ID.
+
+```php
+$id = DB::insert('users', [
+    'name' => 'John Doe',
+    'email' => 'john@example.com',
+    'created_at' => date('Y-m-d H:i:s')
+]);
+echo "Created user with ID: $id";
+```
+
+#### `update(string $table, array $data, string $where, array $params = []): int`
+Update rows.
+
+```php
+$affected = DB::update(
+    'users',
+    ['last_login' => date('Y-m-d H:i:s')],
+    'id = ?',
+    [123]
+);
+echo "Updated $affected rows";
+```
+
+#### `upsert(string $table, array $data, array|string $conflictColumns, ?array $updateColumns = null): void`
+Insert or update on conflict.
+
+```php
+// Insert or update user by email
+DB::upsert(
+    'users',
+    ['email' => 'john@example.com', 'name' => 'John Doe', 'login_count' => 1],
+    'email', // conflict column
+    ['name', 'login_count'] // columns to update
+);
+```
+
+#### `delete(string $table, string $where, array $params = []): int`
+Delete rows.
+
+```php
+$deleted = DB::delete('users', 'active = ?', [0]);
+echo "Deleted $deleted inactive users";
+```
+
+#### `transaction(callable $callback): mixed`
+Execute in transaction.
+
+```php
+$result = DB::transaction(function() {
+    $userId = DB::insert('users', ['name' => 'John']);
+    DB::insert('profiles', ['user_id' => $userId, 'bio' => 'Developer']);
+    return $userId;
+});
+```
+
+---
+
+## Date
+
+Date and time formatting utilities with human-friendly output.
+
+### Methods
+
+#### `ago(\DateTimeInterface|int|string $timestamp, bool $full = false): string`
+Get human-readable relative time.
+
+```php
+// Recent time
+echo Date::ago(time() - 3600); // "1 hour ago"
+echo Date::ago('2023-01-01 12:00:00'); // "5 months ago"
+
+// Full format
+echo Date::ago(time() - 3665, true); // "1 hour, 1 minute, 5 seconds ago"
+
+// Future time
+echo Date::ago(time() + 1800); // "30 minutes from now"
+```
+
+#### `format(\DateTimeInterface|int|string $timestamp, string $format = 'datetime', ?string $timezone = null): string`
+Format dates with presets or custom patterns.
+
+**Available Presets:**
+- `date` → Y-m-d
+- `datetime` → Y-m-d H:i  
+- `datetime_seconds` → Y-m-d H:i:s
+- `time` → H:i
+- `time_seconds` → H:i:s
+- `iso` → ISO 8601 format
+- `rfc2822` → RFC 2822 format
+- `rss` → RSS format
+- `human` → j M Y
+- `human_full` → j F Y, H:i
+
+```php
+$now = time();
+
+// Preset formats
+echo Date::format($now, 'date'); // "2023-12-25"
+echo Date::format($now, 'datetime'); // "2023-12-25 14:30"
+echo Date::format($now, 'human'); // "25 Dec 2023"
+echo Date::format($now, 'iso'); // "2023-12-25T14:30:00+00:00"
+
+// Custom format
+echo Date::format($now, 'l, F j, Y'); // "Monday, December 25, 2023"
+
+// With timezone
+echo Date::format($now, 'datetime', 'America/New_York');
+echo Date::format('2023-12-25 10:00:00 UTC', 'datetime', 'Asia/Tokyo');
+```
+
+#### `timestamp(\DateTimeInterface|int|string|null $value = null, ?string $timezone = null): int`
+Get UNIX timestamp.
+
+```php
+// Current timestamp
+$now = Date::timestamp(); // equivalent to time()
+
+// From various inputs
+$ts1 = Date::timestamp('2023-12-25 12:00:00');
+$ts2 = Date::timestamp(new DateTime('2023-12-25'));
+$ts3 = Date::timestamp('Dec 25, 2023', 'America/New_York');
+```
+
+---
+
+## Files
+
+File system operations and utilities.
+
+### Methods
+
+#### `read(string $path): string|false`
+Read file contents.
+
+```php
+$content = Files::read('/path/to/file.txt');
+if ($content !== false) {
+    echo $content;
+} else {
+    echo "File not found or not readable";
+}
+```
+
+#### `write(string $path, string $content, int $flags = 0): int|false`
+Write content to file.
+
+```php
+// Basic write
+$bytes = Files::write('/path/to/file.txt', 'Hello World');
+
+// Append to file
+$bytes = Files::write('/path/to/file.txt', 'More content', FILE_APPEND);
+
+// Write with lock
+$bytes = Files::write('/path/to/file.txt', 'Safe content', LOCK_EX);
+```
+
+#### `append(string $path, string $content): int|false`
+Append content to file.
+
+```php
+Files::append('/path/to/log.txt', date('Y-m-d H:i:s') . " - Log entry\n");
+```
+
+#### `copy(string $source, string $dest): bool`
+Copy file.
+
+```php
+$success = Files::copy('/source/file.txt', '/destination/file.txt');
+```
+
+#### `move(string $source, string $dest): bool`
+Move/rename file.
+
+```php
+$success = Files::move('/old/path.txt', '/new/path.txt');
+```
+
+#### `delete(string $path): bool`
+Delete file.
+
+```php
+$deleted = Files::delete('/path/to/unwanted.txt');
+```
+
+#### `exists(string $path): bool`
+Check if file exists.
+
+```php
+if (Files::exists('/path/to/file.txt')) {
+    echo "File exists";
+}
+```
+
+#### `size(string $path): int|false`
+Get file size in bytes.
+
+```php
+$size = Files::size('/path/to/file.txt');
+echo "File size: " . Format::bytes($size);
+```
+
+#### `extension(string $path): string`
+Get file extension.
+
+```php
+$ext = Files::extension('/path/to/document.pdf'); // "pdf"
+$ext = Files::extension('image.JPEG'); // "jpeg"
+```
+
+#### `mimeType(string $path): string|false`
+Get MIME type.
+
+```php
+$mime = Files::mimeType('/path/to/image.jpg'); // "image/jpeg"
+```
+
+#### `readJson(string $path): mixed`
+Read and parse JSON file.
+
+```php
+$data = Files::readJson('/path/to/config.json');
+if ($data !== false) {
+    echo $data['app']['name'];
+}
+```
+
+#### `writeJson(string $path, mixed $data, int $flags = JSON_PRETTY_PRINT): int|false`
+Write data as JSON.
+
+```php
+$config = ['app' => ['name' => 'MyApp', 'version' => '1.0']];
+Files::writeJson('/path/to/config.json', $config);
+
+// Compact JSON
+Files::writeJson('/path/to/data.json', $data, 0);
+```
+
+#### `readCsv(string $path, string $delimiter = ',', string $enclosure = '"', string $escape = '\\'): array|false`
+Read CSV file.
+
+```php
+$rows = Files::readCsv('/path/to/data.csv');
+foreach ($rows as $row) {
+    echo implode(' | ', $row) . "\n";
+}
+
+// Custom delimiter
+$rows = Files::readCsv('/path/to/data.tsv', "\t");
+```
+
+#### `writeCsv(string $path, array $data, string $delimiter = ',', string $enclosure = '"', string $escape = '\\'): bool`
+Write CSV file.
+
+```php
+$data = [
+    ['Name', 'Email', 'Age'],
+    ['John Doe', 'john@example.com', '30'],
+    ['Jane Smith', 'jane@example.com', '25']
+];
+Files::writeCsv('/path/to/export.csv', $data);
+```
+
+#### `hash(string $path, string $algo = 'sha256'): string|false`
+Get file hash.
+
+```php
+$sha256 = Files::hash('/path/to/file.txt');
+$md5 = Files::hash('/path/to/file.txt', 'md5');
+```
+
+#### `createDirectory(string $path, int $permissions = 0755): bool`
+Create directory recursively.
+
+```php
+Files::createDirectory('/path/to/nested/directory');
+```
+
+#### `deleteDirectory(string $path): bool`
+Delete directory recursively.
+
+```php
+Files::deleteDirectory('/path/to/temp/folder');
+```
+
+#### `listFiles(string $path, string $pattern = '*'): array`
+List files in directory.
+
+```php
+$allFiles = Files::listFiles('/path/to/directory');
+$phpFiles = Files::listFiles('/path/to/src', '*.php');
+$images = Files::listFiles('/uploads', '*.{jpg,png,gif}');
+```
+
+---
+
+## Format
+
+Data formatting utilities for human-readable output.
+
+### Methods
+
+#### `bytes(int $bytes, int $precision = 2, string $system = 'binary', ?array $units = null): string`
+Format bytes into human-readable sizes.
+
+**System Options:**
+- `binary` (default): 1024-based with KB/MB/GB
+- `iec`: 1024-based with KiB/MiB/GiB  
+- `si`: 1000-based with KB/MB/GB
+
+```php
+echo Format::bytes(1536); // "1.50 KB"
+echo Format::bytes(1048576); // "1.00 MB"
+echo Format::bytes(1536, 1, 'iec'); // "1.5 KiB"
+echo Format::bytes(1000, 2, 'si'); // "1.00 KB"
+
+// Custom units
+echo Format::bytes(1024, 2, 'binary', ['B', 'Kilobytes', 'Megabytes']);
+```
+
+#### `number(float|int $value, int $decimals = 0, string $decimalPoint = '.', string $thousandsSep = ','): string`
+Format numbers.
+
+```php
+echo Format::number(1234.567); // "1,235"
+echo Format::number(1234.567, 2); // "1,234.57"
+echo Format::number(1234.567, 2, ',', ' '); // "1 234,57"
+```
+
+#### `currency(float $amount, string $currency = 'USD', ?string $locale = null, ?int $precision = null): string`
+Format currency amounts.
+
+```php
+echo Format::currency(1234.56); // "1,234.56 USD"
+echo Format::currency(1234.56, 'EUR', 'de_DE'); // "1.234,56 €"
+echo Format::currency(1234.56, 'USD', 'en_US'); // "$1,234.56"
+echo Format::currency(1234.5, 'USD', null, 0); // "$1,235"
+```
+
+#### `percent(float $value, int $precision = 0, bool $fromFraction = true): string`
+Format percentages.
+
+```php
+echo Format::percent(0.1234); // "12%"
+echo Format::percent(0.1234, 2); // "12.34%"
+echo Format::percent(12.34, 1, false); // "12.3%" (already percentage)
+```
+
+#### `shortNumber(float|int $value, int $precision = 1): string`
+Format large numbers with abbreviations.
+
+```php
+echo Format::shortNumber(1234); // "1.2K"
+echo Format::shortNumber(1234567); // "1.2M"
+echo Format::shortNumber(1234567890); // "1.2B"
+echo Format::shortNumber(1500, 0); // "2K"
+```
+
+#### `duration(int $seconds, bool $compact = true): string`
+Format time duration.
+
+```php
+echo Format::duration(3665); // "1h 1m 5s"
+echo Format::duration(3665, false); // "1 hour, 1 minute, 5 seconds"
+echo Format::duration(90); // "1m 30s"
+echo Format::duration(86400); // "1d"
+```
+
+#### `hms(int $seconds, bool $withDays = false): string`
+Format as HH:MM:SS clock time.
+
+```php
+echo Format::hms(3665); // "01:01:05"
+echo Format::hms(90065, true); // "1d 01:01:05"
+```
+
+#### `ordinal(int $number): string`
+Add ordinal suffix to numbers.
+
+```php
+echo Format::ordinal(1); // "1st"
+echo Format::ordinal(22); // "22nd"
+echo Format::ordinal(103); // "103rd"
+echo Format::ordinal(11); // "11th"
+```
+
+#### `parseBytes(string $size): int`
+Parse human-readable size to bytes.
+
+```php
+echo Format::parseBytes('1.5K'); // 1536
+echo Format::parseBytes('2M'); // 2097152
+echo Format::parseBytes('1.5 GB'); // 1610612736
+echo Format::parseBytes('500'); // 500
+```
+
+#### `bool(mixed $value, string $true = 'Yes', string $false = 'No', string $null = ''): string`
+Format boolean values.
+
+```php
+echo Format::bool(true); // "Yes"
+echo Format::bool(false); // "No"
+echo Format::bool(1); // "Yes"
+echo Format::bool('true'); // "Yes"
+echo Format::bool(null); // ""
+echo Format::bool(true, 'Active', 'Inactive'); // "Active"
+```
+
+#### `json(mixed $value, bool $pretty = true, int $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES): string`
+Format JSON for display.
+
+```php
+$data = ['name' => 'John', 'age' => 30];
+echo Format::json($data); // Pretty printed JSON
+echo Format::json($data, false); // Compact JSON
+```
+
+---
+
+## Http
+
+HTTP utilities and client information detection.
+
+### Methods
+
+#### `redirect(string $url, int $statusCode = 302, bool $exit = true): void`
+Redirect to URL.
+
+```php
+// Simple redirect
+Http::redirect('/dashboard');
+
+// Permanent redirect
+Http::redirect('https://example.com', 301);
+
+// Don't exit after redirect
+Http::redirect('/page', 302, false);
+```
+
+#### `download(string $filename, string $mimetype = 'application/octet-stream')`
+Stream file as download.
+
+```php
+// Download file
+Http::download('/path/to/document.pdf', 'application/pdf');
+
+// Let browser detect MIME type
+Http::download('/path/to/image.jpg');
+```
+
+#### `json(mixed $data, int $status = 200, array $headers = []): void`
+Output JSON response.
+
+```php
+// Simple JSON response
+Http::json(['status' => 'success', 'data' => $result]);
+
+// With custom status and headers
+Http::json(
+    ['error' => 'Not found'],
+    404,
+    ['X-Custom-Header' => 'value']
+);
+```
+
+#### `clientInfo(): array`
+Get comprehensive client information.
+
+```php
+$info = Http::clientInfo();
+
+// IP information
+echo $info['ip']; // Primary IP address
+print_r($info['ips']); // All detected IPs
+echo $info['is_proxy'] ? 'Behind proxy' : 'Direct';
+
+// Browser detection
+echo $info['browser']; // "Chrome", "Firefox", etc.
+echo $info['browser_version']; // "91.0.4472.124"
+echo $info['os']; // "Windows", "macOS", "Linux", etc.
+echo $info['engine']; // "Blink", "Gecko", "WebKit"
+
+// Device classification
+echo $info['device']; // "desktop", "mobile", "tablet", "bot"
+echo $info['is_mobile'] ? 'Mobile' : 'Not mobile';
+echo $info['is_tablet'] ? 'Tablet' : 'Not tablet';
+echo $info['is_bot'] ? 'Bot detected' : 'Human user';
+
+// Language preferences
+echo $info['accept_language']; // Raw header
+print_r($info['languages']); // Parsed languages by preference
+
+// Request information
+echo $info['method']; // "GET", "POST", etc.
+echo $info['scheme']; // "http" or "https"
+echo $info['host']; // "example.com"
+echo $info['port']; // 80, 443, etc.
+echo $info['path']; // "/path/to/page"
+echo $info['query']; // "param=value"
+echo $info['url']; // Full URL
+echo $info['referer']; // Referring page
+```
+
+---
+
+## Logs
+
+Database-backed logging system with multiple severity levels.
+
+### Configuration Options
+
+```php
+Logs::init([
+    'table' => 'logs',                    // Log table name
+    'defaults' => [                       // Default fields for all logs
+        'application' => 'MyApp',
+        'environment' => 'production',
+        'user_id' => getCurrentUserId()
+    ]
+]);
+```
+
+### Methods
+
+#### `init(array $config = []): void`
+Initialize logging system.
+
+```php
+DB::sqlite(':memory:');
+Logs::init([
+    'table' => 'application_logs',
+    'defaults' => [
+        'app_version' => '1.0.0',
+        'server' => $_SERVER['SERVER_NAME'] ?? 'unknown'
+    ]
+]);
+```
+
+#### `createLogsTable(?string $table = null): void`
+Create logs table.
+
+```php
+Logs::createLogsTable(); // Use configured table
+Logs::createLogsTable('custom_logs'); // Custom table name
+```
+
+#### `log(string $level, string $message, array $context = [], array $meta = []): string`
+Log message with custom level.
+
+```php
+$id = Logs::log('custom', 'User action performed', [
+    'user_id' => 123,
+    'action' => 'file_upload',
+    'file_name' => 'document.pdf'
+], [
+    'ip_address' => $_SERVER['REMOTE_ADDR'],
+    'user_agent' => $_SERVER['HTTP_USER_AGENT']
+]);
+```
+
+#### Log Level Methods
+Pre-defined methods for standard log levels:
+
+```php
+// Debug information
+Logs::debug('Query executed', ['sql' => 'SELECT * FROM users', 'time' => 0.023]);
+
+// General information
+Logs::info('User logged in', ['user_id' => 123, 'email' => 'john@example.com']);
+
+// Success operations
+Logs::success('File uploaded successfully', ['filename' => 'document.pdf', 'size' => 1024]);
+
+// Notices
+Logs::notice('Configuration changed', ['setting' => 'debug_mode', 'old' => false, 'new' => true]);
+
+// Warnings
+Logs::warning('Low disk space', ['disk' => '/var', 'available' => '500MB']);
+
+// Errors
+Logs::error('Database connection failed', ['host' => 'localhost', 'error' => 'Connection refused']);
+
+// Critical issues
+Logs::critical('Payment processing failed', ['transaction_id' => 'tx_123', 'amount' => 99.99]);
+
+// Alerts requiring immediate attention
+Logs::alert('Security breach detected', ['ip' => '192.168.1.100', 'attempts' => 50]);
+
+// Emergency situations
+Logs::emergency('System shutdown imminent', ['reason' => 'memory_exhausted']);
+```
+
+#### `setDefaults(array $defaults): void`
+Set default fields for all logs.
+
+```php
+Logs::setDefaults([
+    'user_id' => getCurrentUserId(),
+    'session_id' => session_id(),
+    'request_id' => uniqid()
+]);
+```
+
+---
 
 ## PrettyErrorHandler
 
-Developer-friendly error handler that renders colourful overlays or CLI traces.
+Enhanced error display for development and debugging.
 
-### PrettyErrorHandler::__construct(array $options = [], bool $registerGlobal = true)
-Create a handler instance and optionally register it immediately.
-
-**Options**
-- `display` (bool) Force enable `display_errors` (default `true`).
-- `report` (int) Error reporting level (default `E_ALL`).
-- `context_before` (int) Lines of code shown before the error line (default `6`).
-- `context_after` (int) Lines shown after the error line (default `4`).
-- `show_trace` (bool) Include the stack trace (default `true`).
-- `overlay` (bool) Render as an on-page overlay instead of a full HTML page (default `true`).
-- `skip_warnings` (bool) Ignore warnings/notice-level errors (default `false`).
-- `log_errors` (bool) Append rendered output to `pretty_errors.txt` (default `false`).
+### Configuration Options
 
 ```php
-use PhpHelper\PrettyErrorHandler;
-
-$handler = new PrettyErrorHandler(['overlay' => false]);
+PrettyErrorHandler::init([
+    'display' => true,              // Force display errors
+    'report' => E_ALL,              // Error reporting level
+    'context_before' => 6,          // Lines before error
+    'context_after' => 4,           // Lines after error
+    'show_trace' => true,           // Include backtrace
+    'overlay' => true,              // Render as overlay vs full page
+    'skip_warnings' => false,       // Skip PHP warnings
+    'log_errors' => false          // Log to pretty_errors.txt
+]);
 ```
 
-### PrettyErrorHandler::enable(array $options = []): PrettyErrorHandler
-Convenience factory that constructs and registers the handler in one call.
+### Methods
+
+#### `init(array $options = []): self`
+Enable pretty error handling.
 
 ```php
-use PhpHelper\PrettyErrorHandler;
+// Basic setup for development
+PrettyErrorHandler::init();
 
-PrettyErrorHandler::enable(['skip_warnings' => true]);
+// Custom configuration
+PrettyErrorHandler::init([
+    'overlay' => false,        // Full page instead of overlay
+    'context_before' => 10,    // More context lines
+    'log_errors' => true,      // Save errors to file
+    'skip_warnings' => true    // Only show errors and fatals
+]);
 ```
 
-### PrettyErrorHandler::register(): void
-Register the instance as the global error, exception, and shutdown handler.
+#### `__construct(array $options = [], bool $registerGlobal = true)`
+Create handler instance.
 
 ```php
-use PhpHelper\PrettyErrorHandler;
+// Auto-register
+$handler = new PrettyErrorHandler([
+    'show_trace' => false,
+    'overlay' => true
+]);
 
-$handler = new PrettyErrorHandler([], false);
+// Manual registration
+$handler = new PrettyErrorHandler(['display' => true], false);
 $handler->register();
 ```
 
+### Features
+
+- **Syntax-highlighted code context** around error line
+- **Clean stack traces** with clickable file paths
+- **Overlay mode** that doesn't disrupt page layout
+- **Copy-to-clipboard** functionality for error details
+- **CLI support** with colored output
+- **Error logging** to file for production debugging
+
+---
+
 ## Str
 
-String manipulation helpers.
+Comprehensive string manipulation utilities.
 
-### Str::startsWith(string $text, string|array $prefixes, bool $caseSensitive = true): bool
-Determine whether the string starts with any of the provided prefixes.
+### Methods
+
+#### `startsWith(string $text, string|array $prefixes, bool $caseSensitive = true): bool`
+Check if string starts with prefix(es).
 
 ```php
-use PhpHelper\Str;
-
-if (Str::startsWith('Laravel', ['Lar', 'Sym'])) {
-    // ...
-}
+$url = 'https://example.com';
+echo Str::startsWith($url, 'https://'); // true
+echo Str::startsWith($url, ['http://', 'https://']); // true
+echo Str::startsWith('Hello', 'HELLO', false); // true (case insensitive)
 ```
 
-### Str::endsWith(string $text, string|array $suffixes, bool $caseSensitive = true): bool
-Determine whether the string ends with any of the provided suffixes.
+#### `endsWith(string $text, string|array $suffixes, bool $caseSensitive = true): bool`
+Check if string ends with suffix(es).
 
 ```php
-use PhpHelper\Str;
-
-$hasPhp = Str::endsWith('index.php', '.php');
+$filename = 'document.PDF';
+echo Str::endsWith($filename, '.pdf', false); // true
+echo Str::endsWith($filename, ['.doc', '.pdf'], false); // true
 ```
 
-### Str::contains(string $text, string|array $fragments, bool $caseSensitive = true): bool
-Determine whether the string contains any of the fragments.
+#### `contains(string $text, string|array $fragments, bool $caseSensitive = true): bool`
+Check if string contains fragment(s).
 
 ```php
-use PhpHelper\Str;
-
-$mentionsQueue = Str::contains('Queue worker started', 'worker');
+$text = 'The quick brown fox';
+echo Str::contains($text, 'quick'); // true
+echo Str::contains($text, ['cat', 'fox']); // true
+echo Str::contains($text, 'QUICK', false); // true
 ```
 
-### Str::slug(string $value, string $separator = '-'): string
-Generate a URL-friendly slug.
+#### `slug(string $value, string $separator = '-'): string`
+Convert to URL-friendly slug.
 
 ```php
-use PhpHelper\Str;
-
 echo Str::slug('Hello World!'); // "hello-world"
+echo Str::slug('Café & Restaurant', '_'); // "cafe_restaurant"
+echo Str::slug('Ñoño García'); // "nono-garcia"
 ```
 
-### Str::camel(string $value): string
-Convert a string to `camelCase`.
+#### `camel(string $value): string`
+Convert to camelCase.
 
 ```php
-use PhpHelper\Str;
-
-echo Str::camel('make_title'); // "makeTitle"
+echo Str::camel('hello_world'); // "helloWorld"
+echo Str::camel('user-name'); // "userName"
+echo Str::camel('first name'); // "firstName"
 ```
 
-### Str::snake(string $value, string $delimiter = '_'): string
-Convert a string to `snake_case`.
+#### `snake(string $value, string $delimiter = '_'): string`
+Convert to snake_case.
 
 ```php
-use PhpHelper\Str;
-
-echo Str::snake('MakeTitle'); // "make_title"
+echo Str::snake('HelloWorld'); // "hello_world"
+echo Str::snake('userName'); // "user_name"
+echo Str::snake('XMLParser', '-'); // "xml-parser"
 ```
 
-### Str::studly(string $value): string
-Convert a string to StudlyCase / PascalCase.
+#### `studly(string $value): string`
+Convert to StudlyCase.
 
 ```php
-use PhpHelper\Str;
-
-echo Str::studly('make_title'); // "MakeTitle"
+echo Str::studly('hello_world'); // "HelloWorld"
+echo Str::studly('user-name'); // "UserName"
 ```
 
-### Str::lower(string $value, ?string $lang = null): string
-Convert to lowercase while respecting locale rules when available.
+#### `upper(string $value, ?string $lang = null): string`
+Convert to uppercase with locale support.
 
 ```php
-use PhpHelper\Str;
-
-echo Str::lower('İSTANBUL', 'tr');
+echo Str::upper('hello world'); // "HELLO WORLD"
+echo Str::upper('café', 'tr'); // Turkish locale
 ```
 
-### Str::upper(string $value, ?string $lang = null): string
-Convert to uppercase while respecting locale rules when available.
+#### `lower(string $value, ?string $lang = null): string`
+Convert to lowercase with locale support.
 
 ```php
-use PhpHelper\Str;
-
-echo Str::upper('istanbul', 'tr');
+echo Str::lower('HELLO WORLD'); // "hello world"
+echo Str::lower('CAFÉ', 'tr'); // Turkish locale
 ```
 
-### Str::title(string $value, ?string $lang = null): string
-Convert to Title Case, applying locale-aware casing when possible.
+#### `title(string $value, ?string $lang = null): string`
+Convert to Title Case.
 
 ```php
-use PhpHelper\Str;
-
-echo Str::title('the quick brown fox');
+echo Str::title('hello world'); // "Hello World"
+echo Str::title('HELLO WORLD'); // "Hello World"
 ```
 
-### Str::limit(string $value, int $limit = 100, string $end = '...'): string
-Truncate a string to the desired character length.
+#### `limit(string $value, int $limit = 100, string $end = '...'): string`
+Limit string length.
 
 ```php
-use PhpHelper\Str;
-
-echo Str::limit('Once upon a time in a far away land', 16);
+$text = 'This is a very long string that needs to be truncated';
+echo Str::limit($text, 20); // "This is a very long..."
+echo Str::limit($text, 20, ' [more]'); // "This is a very long [more]"
 ```
 
-### Str::words(string $value, int $words = 100, string $end = '...'): string
-Limit a string by words instead of characters.
+#### `words(string $value, int $words = 100, string $end = '...'): string`
+Limit word count.
 
 ```php
-use PhpHelper\Str;
-
-echo Str::words('This sentence has five words total', 3);
+$text = 'Lorem ipsum dolor sit amet consectetur adipiscing elit';
+echo Str::words($text, 4); // "Lorem ipsum dolor sit..."
+echo Str::words($text, 3, ' [continue]'); // "Lorem ipsum dolor [continue]"
 ```
 
-### Str::randomString(int $length = 16): string
-Generate a cryptographically secure random alpha-numeric string.
+#### `before(string $text, string $search, bool $caseSensitive = true): string`
+Get text before first occurrence.
 
 ```php
-use PhpHelper\Str;
-
-$token = Str::randomString(32);
+echo Str::before('user@example.com', '@'); // "user"
+echo Str::before('Hello World', ' '); // "Hello"
 ```
 
-### Str::uuid4(): string
-Generate a version 4 UUID.
+#### `after(string $text, string $search, bool $caseSensitive = true): string`
+Get text after first occurrence.
 
 ```php
-use PhpHelper\Str;
-
-$uuid = Str::uuid4();
+echo Str::after('user@example.com', '@'); // "example.com"
+echo Str::after('Hello World', ' '); // "World"
 ```
 
-### Str::isJson(string $value): bool
-Determine whether the string contains valid JSON.
+#### `between(string $text, string $from, string $to, bool $caseSensitive = true): ?string`
+Extract text between delimiters.
 
 ```php
-use PhpHelper\Str;
-
-$isJson = Str::isJson('{"ok":true}');
+echo Str::between('Hello [World] Test', '[', ']'); // "World"
+echo Str::between('<h1>Title</h1>', '<h1>', '</h1>'); // "Title"
+echo Str::between('No match here', '[', ']'); // null
 ```
 
-### Str::normalizeEol(string $value): string
-Normalise end-of-line characters to `\n`.
+#### `replaceFirst(string $text, string $search, string $replace, bool $caseSensitive = true): string`
+Replace first occurrence.
 
 ```php
-use PhpHelper\Str;
-
-$normalized = Str::normalizeEol("first\r\nsecond");
+echo Str::replaceFirst('foo bar foo', 'foo', 'baz'); // "baz bar foo"
 ```
 
-### Str::isEmpty(?string $text, bool $trim = true): bool
-Check whether a string is empty (with optional trimming).
+#### `replaceLast(string $text, string $search, string $replace, bool $caseSensitive = true): string`
+Replace last occurrence.
 
 ```php
-use PhpHelper\Str;
-
-$isBlank = Str::isEmpty("  ");
+echo Str::replaceLast('foo bar foo', 'foo', 'baz'); // "foo bar baz"
 ```
 
-### Str::before(string $text, string $search, bool $caseSensitive = true): string
-Return everything before the first occurrence of the search string.
+#### `ensurePrefix(string $text, string $prefix, bool $caseSensitive = true): string`
+Ensure string starts with prefix.
 
 ```php
-use PhpHelper\Str;
-
-echo Str::before('key=value', '='); // "key"
+echo Str::ensurePrefix('example.com', 'https://'); // "https://example.com"
+echo Str::ensurePrefix('https://example.com', 'https://'); // "https://example.com"
 ```
 
-### Str::after(string $text, string $search, bool $caseSensitive = true): string
-Return everything after the first occurrence of the search string.
+#### `ensureSuffix(string $text, string $suffix, bool $caseSensitive = true): string`
+Ensure string ends with suffix.
 
 ```php
-use PhpHelper\Str;
-
-echo Str::after('key=value', '='); // "value"
+echo Str::ensureSuffix('filename', '.txt'); // "filename.txt"
+echo Str::ensureSuffix('filename.txt', '.txt'); // "filename.txt"
 ```
 
-### Str::between(string $text, string $from, string $to, bool $caseSensitive = true): ?string
-Extract the substring between two delimiters.
+#### `squish(string $text): string`
+Collapse whitespace and trim.
 
 ```php
-use PhpHelper\Str;
-
-$token = Str::between('<id>42</id>', '<id>', '</id>');
+echo Str::squish("  Hello\n\t World  "); // "Hello World"
 ```
 
-### Str::replaceFirst(string $text, string $search, string $replace, bool $caseSensitive = true): string
-Replace the first occurrence of a substring.
+#### `randomString(int $length = 16): string`
+Generate cryptographically secure random string.
 
 ```php
-use PhpHelper\Str;
-
-$output = Str::replaceFirst('2024-01-2024', '2024', '2030');
+echo Str::randomString(); // e.g., "aB3xY9mK2nP7qR8s"
+echo Str::randomString(32); // 32-character string
 ```
 
-### Str::replaceLast(string $text, string $search, string $replace, bool $caseSensitive = true): string
-Replace the last occurrence of a substring.
+#### `uuid4(): string`
+Generate UUID v4.
 
 ```php
-use PhpHelper\Str;
-
-$output = Str::replaceLast('version-1.0.0', '.', '-');
+echo Str::uuid4(); // e.g., "f47ac10b-58cc-4372-a567-0e02b2c3d479"
 ```
 
-### Str::containsAll(string $text, array $needles, bool $caseSensitive = true): bool
-Ensure that all provided fragments exist within the string.
+#### `isJson(string $value): bool`
+Check if string is valid JSON.
 
 ```php
-use PhpHelper\Str;
-
-$valid = Str::containsAll('First Second Third', ['First', 'Third']);
+echo Str::isJson('{"name":"John"}'); // true
+echo Str::isJson('invalid json'); // false
 ```
 
-### Str::ensurePrefix(string $text, string $prefix, bool $caseSensitive = true): string
-Add the prefix when the string does not already start with it.
+#### SEO and Debug Utilities
 
 ```php
-use PhpHelper\Str;
+// SEO-friendly filename
+echo Str::seoFileName('My Document (2023).pdf'); // "my-document-2023.pdf"
 
-$uri = Str::ensurePrefix('admin', '/');
+// SEO-friendly URL
+echo Str::seoUrl('Product Category & Items'); // "product-category-items"
+
+// Debug helpers
+Str::prettyLog($complexArray); // Pretty print with <pre>
+Str::prettyLogExit($data); // Pretty print and exit
 ```
 
-### Str::ensureSuffix(string $text, string $suffix, bool $caseSensitive = true): string
-Ensure the string ends with the given suffix.
-
-```php
-use PhpHelper\Str;
-
-$path = Str::ensureSuffix('/var/www', '/'); // '/var/www/'
-```
-
-### Str::squish(string $text): string
-Collapse consecutive whitespace to single spaces and trim the string.
-
-```php
-use PhpHelper\Str;
-
-$clean = Str::squish("  Hello   world  ");
-```
-
-### Str::seoFileName(string $text): string
-Produce a SEO-friendly filename that keeps dots and word characters.
-
-```php
-use PhpHelper\Str;
-
-$file = Str::seoFileName('Résumé 2024.pdf');
-```
-
-### Str::seoUrl(string $text): string
-Produce a SEO-friendly URL slug.
-
-```php
-use PhpHelper\Str;
-
-$url = Str::seoUrl('Résumé 2024.pdf');
-```
-
-### Str::prettyLog(mixed $v): void
-Print a prettified value wrapped in `<pre>` tags.
-
-```php
-use PhpHelper\Str;
-
-Str::prettyLog(['status' => 'ok']);
-```
-
-### Str::prettyLogExit(mixed $v): void
-Pretty-print a value, render a black background, and terminate execution.
-
-```php
-use PhpHelper\Str;
-
-// Str::prettyLogExit(['debug' => true]);
-```
-
-### Str::print_functions(object $obj): void
-Dump the methods available on an object.
-
-```php
-use PhpHelper\Str;
-
-Str::print_functions(new DateTimeImmutable());
-```
-
-### Str::blackBG(): void
-Render a blank HTML page with a black background (useful before debug dumps).
-
-```php
-use PhpHelper\Str;
-
-Str::blackBG();
-```
+---
 
 ## TwigHelper
 
-Utilities for bootstrapping and extending Twig environments.
+Simplified Twig template engine integration.
 
-### TwigHelper::init(string|array $paths = [], array $options = [], ?\Twig\Loader\LoaderInterface $loader = null): \Twig\Environment
-Create a Twig environment with optional template paths and environment options.
-
-**Path Definitions**
-- Pass a string for the default namespace.
-- Pass an associative array of `namespace => path` or `namespace => [paths...]` definitions.
-
-**Options** (merged with defaults `cache=false`, `auto_reload=true`, `strict_variables=false`)
-- Any `\Twig\Environment` constructor option, such as `cache`, `auto_reload`, `strict_variables`.
+### Configuration Options
 
 ```php
-use PhpHelper\TwigHelper;
-
-$twig = TwigHelper::init(__DIR__ . '/views', ['cache' => __DIR__ . '/cache/twig']);
+TwigHelper::init([
+    // Template directories (can be string or array)
+    '/path/to/templates',
+    
+    // Namespaced paths
+    [
+        'admin' => '/path/to/admin/templates',
+        'email' => '/path/to/email/templates'
+    ]
+], [
+    // Twig environment options
+    'cache' => '/path/to/cache',          // Template cache directory
+    'auto_reload' => true,                // Auto-reload templates in dev
+    'strict_variables' => false,          // Strict variable checking
+    'debug' => true                       // Enable debug mode
+]);
 ```
 
-### TwigHelper::setEnvironment(\Twig\Environment $environment): void
-Store an existing environment and register the default helpers.
+### Methods
+
+#### `init(string|array $paths = [], array $options = [], ?\Twig\Loader\LoaderInterface $loader = null): \Twig\Environment`
+Initialize Twig environment.
 
 ```php
-use PhpHelper\TwigHelper;
-use Twig\Environment;
+// Basic setup
+TwigHelper::init('/path/to/templates');
 
-TwigHelper::setEnvironment(new Environment(new Twig\Loader\ArrayLoader([])));
+// Multiple directories
+TwigHelper::init([
+    '/path/to/app/templates',
+    '/path/to/shared/templates'
+]);
+
+// Namespaced templates
+TwigHelper::init([
+    'app' => '/path/to/app/templates',
+    'admin' => '/path/to/admin/templates',
+    '/path/to/shared/templates' // default namespace
+]);
+
+// With custom options
+TwigHelper::init('/templates', [
+    'cache' => '/tmp/twig',
+    'auto_reload' => App::isLocal(),
+    'strict_variables' => true
+]);
 ```
 
-### TwigHelper::hasEnvironment(): bool
-Check whether an environment has been stored.
+#### `render(string $template, array $context = [], ?\Twig\Environment $environment = null): string`
+Render template.
 
 ```php
-use PhpHelper\TwigHelper;
+// Basic rendering
+$html = TwigHelper::render('page.html.twig', [
+    'title' => 'Welcome',
+    'user' => AuthManager::user()
+]);
 
-if (!TwigHelper::hasEnvironment()) {
-    TwigHelper::init(__DIR__ . '/views');
+// Namespaced template
+$html = TwigHelper::render('@admin/dashboard.html.twig', [
+    'stats' => $dashboardStats
+]);
+
+// Complex context
+$html = TwigHelper::render('product/detail.html.twig', [
+    'product' => $product,
+    'related' => $relatedProducts,
+    'reviews' => $reviews,
+    'user_can_review' => AuthManager::isLoggedIn()
+]);
+```
+
+#### `addGlobal(string $name, mixed $value, ?\Twig\Environment $environment = null): void`
+Add global variable.
+
+```php
+// Make current user available everywhere
+TwigHelper::addGlobal('current_user', AuthManager::user());
+
+// Application config
+TwigHelper::addGlobal('app_name', Config::get('app.name'));
+TwigHelper::addGlobal('app_version', '1.0.0');
+
+// Utility functions
+TwigHelper::addGlobal('is_local', App::isLocal());
+```
+
+#### `addFunction(string $name, callable $callable, array $options = [], ?\Twig\Environment $environment = null): void`
+Register custom function.
+
+```php
+// Simple function
+TwigHelper::addFunction('asset_url', function($path) {
+    return '/assets/' . ltrim($path, '/');
+});
+
+// Function with context access
+TwigHelper::addFunction('can', function($permission) {
+    $user = AuthManager::user();
+    return $user && in_array($permission, $user['permissions'] ?? []);
+}, ['needs_context' => false]);
+
+// Safe HTML function
+TwigHelper::addFunction('render_widget', function($widgetName, $data) {
+    return WidgetRenderer::render($widgetName, $data);
+}, ['is_safe' => ['html']]);
+```
+
+#### `addFilter(string $name, callable $callable, array $options = [], ?\Twig\Environment $environment = null): void`
+Register custom filter.
+
+```php
+// Custom formatting filter
+TwigHelper::addFilter('currency', function($amount, $currency = 'USD') {
+    return Format::currency($amount, $currency);
+});
+
+// String manipulation filter
+TwigHelper::addFilter('excerpt', function($text, $length = 100) {
+    return Str::words($text, $length);
+});
+
+// Usage in templates:
+// {{ price|currency('EUR') }}
+// {{ article.content|excerpt(50) }}
+```
+
+#### `addPath(string $path, ?string $namespace = null, ?\Twig\Environment $environment = null): void`
+Add template directory.
+
+```php
+// Add to default namespace
+TwigHelper::addPath('/path/to/new/templates');
+
+// Add namespaced path
+TwigHelper::addPath('/path/to/plugins/templates', 'plugins');
+```
+
+### Built-in Filters and Functions
+
+TwigHelper automatically registers many useful filters and functions:
+
+**Filters:**
+- `bytes` - Format::bytes()
+- `currency` - Format::currency()
+- `ago` - Date::ago()
+- `slug` - Str::slug()
+- `camel` - Str::camel()
+- `snake` - Str::snake()
+- `limit` - Str::limit()
+- `json_pretty` - Format::json()
+
+**Functions:**
+- `format_date` - Date::format()
+- `array_get` - Arrays::get()
+- `format_bytes` - Format::bytes()
+- `with_query_params` - Add/modify URL parameters
+
+**Usage in templates:**
+```twig
+{# Format file size #}
+File size: {{ file.size|bytes }}
+
+{# Format currency #}
+Price: {{ product.price|currency('EUR') }}
+
+{# Relative time #}
+Posted {{ post.created_at|ago }}
+
+{# Array access with dot notation #}
+{{ array_get(config, 'app.name') }}
+
+{# URL manipulation #}
+<a href="{{ with_query_params('page', 2) }}">Next Page</a>
+<a href="{{ with_query_params({'sort': 'name', 'order': 'desc'}) }}">Sort by Name</a>
+```
+
+---
+
+## Best Practices
+
+### Database Usage
+```php
+// Always initialize DB connection first
+DB::sqlite(':memory:');
+
+// Use transactions for multiple operations
+DB::transaction(function() {
+    $userId = DB::insert('users', $userData);
+    DB::insert('profiles', array_merge($profileData, ['user_id' => $userId]));
+    return $userId;
+});
+
+// Use upsert for insert-or-update scenarios
+DB::upsert('settings', [
+    'key' => 'theme',
+    'value' => 'dark',
+    'updated_at' => date('Y-m-d H:i:s')
+], 'key');
+```
+
+### Error Handling
+```php
+// Enable pretty errors in development
+if (App::isLocal()) {
+    PrettyErrorHandler::init([
+        'overlay' => true,
+        'log_errors' => true
+    ]);
 }
 ```
 
-### TwigHelper::env(): \Twig\Environment
-Retrieve the stored environment (throws when none is configured).
-
+### Logging
 ```php
-use PhpHelper\TwigHelper;
+// Set up logging with defaults
+Logs::init([
+    'defaults' => [
+        'application' => 'MyApp',
+        'environment' => App::isProduction() ? 'prod' : 'dev',
+        'user_id' => AuthManager::user()['id'] ?? null
+    ]
+]);
 
-$env = TwigHelper::env();
+// Create table once
+Logs::createLogsTable();
+
+// Log throughout your application
+Logs::info('User logged in', ['user_id' => $user['id']]);
+Logs::warning('API rate limit approaching', ['current' => 480, 'limit' => 500]);
 ```
 
-### TwigHelper::render(string $template, array $context = [], ?\Twig\Environment $environment = null): string
-Render a Twig template using the stored or provided environment.
-
+### String Processing
 ```php
-use PhpHelper\TwigHelper;
+// Chain string operations
+$slug = Str::slug(Str::limit($title, 50));
 
-echo TwigHelper::render('welcome.twig', ['name' => 'Ada']);
+// Safe file naming
+$filename = Str::seoFileName($userInput) . '.' . $extension;
+
+// Validation
+if (Str::isJson($input)) {
+    $data = json_decode($input, true);
+}
 ```
 
-### TwigHelper::addGlobal(string $name, mixed $value, ?\Twig\Environment $environment = null): void
-Register a new global variable available in all templates.
-
+### Template Organization
 ```php
-use PhpHelper\TwigHelper;
+// Organize templates by feature
+TwigHelper::init([
+    'user' => '/templates/user',
+    'admin' => '/templates/admin',
+    'email' => '/templates/email',
+    '/templates/shared' // default namespace
+]);
 
-TwigHelper::addGlobal('appName', 'PHP Helper Demo');
-```
-
-### TwigHelper::addFunction(string $name, callable $callable, array $options = [], ?\Twig\Environment $environment = null): void
-Add a custom Twig function.
-
-```php
-use PhpHelper\TwigHelper;
-
-TwigHelper::addFunction('current_year', fn () => (int) date('Y'));
-```
-
-### TwigHelper::addFilter(string $name, callable $callable, array $options = [], ?\Twig\Environment $environment = null): void
-Add a custom Twig filter.
-
-```php
-use PhpHelper\TwigHelper;
-
-TwigHelper::addFilter('rot13', fn ($value) => str_rot13((string) $value));
-```
-
-### TwigHelper::registerDefaults(?\Twig\Environment $environment = null): void
-Register the helper-provided filters and functions (formatting, string helpers, etc.).
-
-```php
-use PhpHelper\TwigHelper;
-
-TwigHelper::registerDefaults();
-```
-
-### TwigHelper::addPath(string $path, ?string $namespace = null, ?\Twig\Environment $environment = null): void
-Add an extra template directory to the filesystem loader.
-
-```php
-use PhpHelper\TwigHelper;
-
-TwigHelper::addPath(__DIR__ . '/vendor/package/templates', 'pkg');
-```
-
-### TwigHelper::clear(): void
-Forget the stored environment (useful inside tests).
-
-```php
-use PhpHelper\TwigHelper;
-
-TwigHelper::clear();
+// Use globals for common data
+TwigHelper::addGlobal('site_name', Config::get('site.name'));
+TwigHelper::addGlobal('current_user', AuthManager::user());
 ```
 
