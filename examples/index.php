@@ -23,7 +23,16 @@ if (App::isProduction()) {
 } 
 // ---- LOCAL ----
 else {
-    DB::mysql('phphelper', 'root', '1');
+    $db = "phphelper1";
+    $user = "root";
+    $pass = "1";
+    if (App::isCli()) {
+        // DB::restore($db, $user, $pass);
+        // DB::backup($db, $user, $pass);
+        return;
+    }
+
+    DB::mysql($db, $user, $pass);
     PrettyErrorHandler::init(['display' => true, 'log_errors' => false]);
 
 }   

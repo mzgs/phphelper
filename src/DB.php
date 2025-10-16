@@ -13,6 +13,91 @@ class DB
     protected static ?PDO $pdo = null;
 
     /**
+     * Dump a MySQL database to a SQL file using mysqldump.
+     *
+     * @param array{
+     *     host?: string,
+     *     port?: int|string|null,
+     *     unix_socket?: ?string,
+     *     mysqldump_path?: string
+     * } $options
+     */
+    public static function backup(string $dbname, string $dbUser, string $dbPassword, string $filePath = 'db.sql', array $options = []): void
+    {
+        if ($dbname === '') {
+            throw new \InvalidArgumentException('Database name must not be empty.');
+        }
+
+        if ($filePath === '') {
+            throw new \InvalidArgumentException('Backup file path must not be empty.');
+        }
+
+        $mysqldump = $options['mysqldump_path'] ?? 'mysqldump';
+        if (!is_string($mysqldump) || $mysqldump === '') {
+            throw new \InvalidArgumentException('The "mysqldump_path" option must be a non-empty string.');
+        }
+
+        $command = self::buildMysqlCliCommand($mysqldump, $dbUser, $dbPassword, $options)
+            . ' ' . escapeshellarg($dbname)
+            . ' > ' . escapeshellarg($filePath);
+
+        self::runShellCommand($command, 'Database backup failed.');
+    }
+
+    /**
+     * Restore a MySQL database from a SQL file.
+     *
+     * @param array{
+     *     host?: string,
+     *     port?: int|string|null,
+     *     unix_socket?: ?string,
+     *     charset?: string|null,
+     *     mysql_path?: string
+     * } $options
+     */
+    public static function restore(string $dbname, string $dbUser, string $dbPassword, string $filePath = 'db.sql', array $options = []): void
+    {
+        if ($dbname === '') {
+            throw new \InvalidArgumentException('Database name must not be empty.');
+        }
+
+        if (!is_file($filePath) || !is_readable($filePath)) {
+            throw new RuntimeException('Backup file is not readable: ' . $filePath);
+        }
+
+        $mysql = $options['mysql_path'] ?? 'mysql';
+        if (!is_string($mysql) || $mysql === '') {
+            throw new \InvalidArgumentException('The "mysql_path" option must be a non-empty string.');
+        }
+
+        $charset = $options['charset'] ?? 'utf8';
+        if ($charset !== null) {
+            if (!is_string($charset) || $charset === '') {
+                throw new \InvalidArgumentException('The "charset" option must be a non-empty string or null.');
+            }
+            if (!preg_match('/^[A-Za-z0-9_]+$/', $charset)) {
+                throw new \InvalidArgumentException('Invalid charset supplied for restore operation.');
+            }
+        }
+
+        $quotedDb = self::quoteMysqlIdentifier($dbname);
+        $mysqlBase = self::buildMysqlCliCommand($mysql, $dbUser, $dbPassword, $options);
+
+        $dropSql = 'DROP DATABASE IF EXISTS ' . $quotedDb . ';';
+        self::runShellCommand($mysqlBase . ' -e ' . escapeshellarg($dropSql), 'Failed to drop existing database.');
+
+        $createSql = 'CREATE DATABASE ' . $quotedDb;
+        if ($charset !== null) {
+            $createSql .= ' DEFAULT CHARACTER SET ' . $charset;
+        }
+        $createSql .= ';';
+        self::runShellCommand($mysqlBase . ' -e ' . escapeshellarg($createSql), 'Failed to create database.');
+
+        $importCommand = $mysqlBase . ' ' . escapeshellarg($dbname) . ' < ' . escapeshellarg($filePath);
+        self::runShellCommand($importCommand, 'Database import failed.');
+    }
+
+    /**
      * Establish a PDO connection.
      */
     public static function connect(string $dsn, ?string $username = null, ?string $password = null, array $options = []): void
@@ -202,6 +287,63 @@ class DB
         if (is_bool($value)) return $value;
         $str = strtolower((string) $value);
         return in_array($str, ['1', 'true', 'yes', 'on'], true);
+    }
+
+    /**
+     * Build a mysql or mysqldump CLI command with shared connection parameters.
+     *
+     * @param array{
+     *     host?: string,
+     *     port?: int|string|null,
+     *     unix_socket?: ?string
+     * } $options
+     */
+    protected static function buildMysqlCliCommand(string $binary, string $dbUser, string $dbPassword, array $options = []): string
+    {
+        $command = 'MYSQL_PWD=' . escapeshellarg($dbPassword)
+                 . ' ' . escapeshellarg($binary)
+                 . ' -u' . escapeshellarg($dbUser);
+
+        if (array_key_exists('host', $options) && $options['host'] !== null) {
+            if (!is_string($options['host'])) {
+                throw new \InvalidArgumentException('The "host" option must be a string or null.');
+            }
+            $command .= ' -h' . escapeshellarg($options['host']);
+        }
+
+        if (array_key_exists('port', $options) && $options['port'] !== null) {
+            if (!is_int($options['port']) && !is_string($options['port'])) {
+                throw new \InvalidArgumentException('The "port" option must be an int, string, or null.');
+            }
+            $command .= ' -P' . escapeshellarg((string) $options['port']);
+        }
+
+        if (array_key_exists('unix_socket', $options) && $options['unix_socket'] !== null) {
+            if (!is_string($options['unix_socket'])) {
+                throw new \InvalidArgumentException('The "unix_socket" option must be a string or null.');
+            }
+            $command .= ' --socket=' . escapeshellarg($options['unix_socket']);
+        }
+
+        return $command;
+    }
+
+    /** Execute a shell command and throw on failure. */
+    protected static function runShellCommand(string $command, string $errorMessage): void
+    {
+        $output = [];
+        $exitCode = 0;
+        exec($command, $output, $exitCode);
+        if ($exitCode !== 0) {
+            $details = $output === [] ? '' : ' Output: ' . implode("\n", $output);
+            throw new RuntimeException($errorMessage . ' Exit code: ' . $exitCode . '.' . $details);
+        }
+    }
+
+    /** Quote a MySQL identifier such as a database name. */
+    protected static function quoteMysqlIdentifier(string $identifier): string
+    {
+        return '`' . str_replace('`', '``', $identifier) . '`';
     }
 
     /**
