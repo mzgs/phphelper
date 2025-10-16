@@ -11,18 +11,21 @@ require_once __DIR__ . '/../src/AIChat.php';
 require_once __DIR__ . '/../src/App.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
+ 
 
+
+// ---- PRODUCTION ----
 if (App::isProduction()) {
     DB::mysql('phphelper', 'root', '1');
     PrettyErrorHandler::enable(['display' => false, 'log_errors' => true]);
 
-} else {
+} 
+// ---- LOCAL ----
+else {
     DB::mysql('phphelper', 'root', '1');
     PrettyErrorHandler::enable(['display' => true, 'log_errors' => false]);
 
 }   
-
-sdfsdf
 
 // DB::getRow('SELECT * FROM users');
 
@@ -33,7 +36,7 @@ AuthManager::init([
     
 ]);
 
-echo $sdfsd;
+// echo $sdfsd;
 
 // AuthManager::createUsersTable();
 // AuthManager::register('new@example.com', '1');
@@ -57,7 +60,7 @@ Config::init();
 Config::createConfigTable();
 Config::set('site_name', 'PHP Helper');
 
-Str::prettyLog(App::isLocal());
+
 
 $twigCard = null;
 try {
