@@ -6,6 +6,7 @@ require_once __DIR__ . '/../src/DB.php';
 require_once __DIR__ . '/../src/Str.php';
 require_once __DIR__ . '/../src/Format.php';
 require_once __DIR__ . '/../src/Http.php';
+require_once __DIR__ . '/../src/App.php';
 
 // Small helpers for tidy output
 function longLine(int $length = 64, string $char = '-'): void
@@ -27,6 +28,10 @@ function line(string $label, mixed $value): void
 {
     echo $label . $value . PHP_EOL;
 }
+
+
+line("iscli: ",App::isCli());
+
 
 section('Database examples');
 
