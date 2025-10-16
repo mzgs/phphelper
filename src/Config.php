@@ -1,5 +1,11 @@
 <?php
 
+namespace PhpHelper;
+
+use InvalidArgumentException;
+use PDO;
+use RuntimeException;
+
 class Config
 {
     protected static bool $initialized = false;

@@ -1,5 +1,12 @@
 <?php
 
+namespace PhpHelper;
+
+use DateTimeImmutable;
+use InvalidArgumentException;
+use JsonException;
+use PDO;
+use RuntimeException;
 
 class Logs
 {

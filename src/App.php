@@ -1,5 +1,7 @@
 <?php
 
+namespace PhpHelper;
+
 class App
 {
     public static function isLocal(): bool

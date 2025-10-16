@@ -1,5 +1,10 @@
 <?php
 
+namespace PhpHelper;
+
+use InvalidArgumentException;
+use PDO;
+use RuntimeException;
 
 class AuthManager
 {

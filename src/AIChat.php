@@ -1,8 +1,12 @@
 <?php
 
+namespace PhpHelper;
+
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+use InvalidArgumentException;
 use Psr\Http\Message\ResponseInterface;
+use RuntimeException;
 
 class AIChat
 {

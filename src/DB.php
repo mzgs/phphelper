@@ -1,5 +1,12 @@
 <?php
 
+namespace PhpHelper;
+
+use PDO;
+use PDOException;
+use PDOStatement;
+use RuntimeException;
+
 class DB
 {
     /** @var PDO|null */

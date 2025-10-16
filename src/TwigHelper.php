@@ -1,5 +1,10 @@
 <?php
 
+namespace PhpHelper;
+
+use InvalidArgumentException;
+use RuntimeException;
+
 class TwigHelper
 {
     private static ?\Twig\Environment $environment = null;

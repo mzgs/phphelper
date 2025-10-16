@@ -1,5 +1,7 @@
 <?php
 
+namespace PhpHelper;
+
 class Http
 {
     /**

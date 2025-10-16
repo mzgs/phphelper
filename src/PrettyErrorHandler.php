@@ -1,5 +1,7 @@
 <?php
 
+namespace PhpHelper;
+
 class PrettyErrorHandler
 {
     /** @var array<string,mixed> */
