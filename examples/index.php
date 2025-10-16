@@ -32,9 +32,12 @@ AuthManager::init([
 AIChat::init([
     'api_key' => getenv('OPENAI_API_KEY'),
     'model' => 'gpt-4o-mini',
-]); 
+]);
 
-$res = AIChat::reply( 'test' );
+$res = AIChat::reply(
+    'summary word highest mountain with this json format { "mountain": "name", "height": 111 }',
+    
+);
 Str::prettyLog($res);
 
 Config::init();

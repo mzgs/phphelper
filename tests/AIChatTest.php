@@ -131,4 +131,5 @@ final class AIChatTest extends TestCase
         $this->assertSame($messages, $body['messages']);
         $this->assertSame(0.2, $body['temperature']);
     }
+
 }

@@ -86,8 +86,18 @@ class AIChat
             'messages' => $messages,
         ], $payload);
 
-        if (!isset($body['response_format']) && is_array(self::$config['response_format'])) {
-            $body['response_format'] = self::$config['response_format'];
+        if (array_key_exists('response_format', $body)) {
+            $normalized = self::normalizeResponseFormat($body['response_format']);
+            if ($normalized !== null) {
+                $body['response_format'] = $normalized;
+            } else {
+                unset($body['response_format']);
+            }
+        } elseif (self::$config['response_format'] !== null) {
+            $normalized = self::normalizeResponseFormat(self::$config['response_format']);
+            if ($normalized !== null) {
+                $body['response_format'] = $normalized;
+            }
         }
 
         try {
@@ -191,5 +201,33 @@ class AIChat
         }
 
         return $decoded;
+    }
+
+    /**
+     * @param mixed $responseFormat
+     * @return array<string, string>|null
+     */
+    private static function normalizeResponseFormat($responseFormat): ?array
+    {
+        $type = null;
+
+        if (is_string($responseFormat)) {
+            $type = trim($responseFormat);
+        } elseif (is_array($responseFormat)) {
+            $typeValue = $responseFormat['type'] ?? null;
+            if (is_string($typeValue)) {
+                $type = trim($typeValue);
+            }
+        }
+
+        if (!is_string($type) || $type === '') {
+            return null;
+        }
+
+        if (strcasecmp($type, 'json') === 0) {
+            $type = 'json_object';
+        }
+
+        return ['type' => $type];
     }
 }
