@@ -1,12 +1,6 @@
 <?php
 
-function dd(...$vars): void
-{
-    foreach ($vars as $var) {
-        var_dump($var);
-    }
-    die;
-}
+use Str;
 
   function blackBG()
     {
