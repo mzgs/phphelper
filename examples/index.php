@@ -1,14 +1,13 @@
 <?php
-require_once __DIR__ . '/../src/PrettyErrorHandler.php';
-require_once __DIR__ . '/../src/DB.php';
-require_once __DIR__ . '/../src/Str.php';
-require_once __DIR__ . '/../src/AuthManager.php';
-require_once __DIR__ . '/../src/TwigHelper.php';
-require_once __DIR__ . '/../src/Logs.php';
-require_once __DIR__ . '/../src/Config.php';
-require_once __DIR__ . '/../src/Format.php';
-require_once __DIR__ . '/../src/AIChat.php';
-require_once __DIR__ . '/../src/App.php';
+
+use PhpHelper\DB;
+use PhpHelper\App;
+use PhpHelper\Str;
+use PhpHelper\AIChat;
+use PhpHelper\Config;
+use PhpHelper\TwigHelper;
+use PhpHelper\AuthManager;
+use PhpHelper\PrettyErrorHandler;
 require_once __DIR__ . '/../vendor/autoload.php';
 
  
