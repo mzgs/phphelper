@@ -15,6 +15,7 @@ class PrettyErrorHandler
      *  - show_trace (bool): include backtrace (default true)
      *  - overlay (bool): render as overlay instead of full page (default true)
      *  - skip_warnings (bool): bypass handler output for PHP warnings (default false)
+     *  - log_errors (bool): append rendered errors to pretty_errors.txt (default false)
      */
     public function __construct(array $options = [], bool $registerGlobal = true)
     {
@@ -27,6 +28,7 @@ class PrettyErrorHandler
             // Render as an on-page overlay instead of a full page
             'overlay' => true,
             'skip_warnings' => false,
+            'log_errors' => false,
         ];
 
         if ($registerGlobal) {
@@ -134,11 +136,53 @@ class PrettyErrorHandler
 
     private function renderThrowable(\Throwable $e): void
     {
+        if (!empty($this->options['log_errors'])) {
+            $this->logThrowable($e);
+        }
+
         if ($this->isCli()) {
             $this->renderCli($e);
         } else {
             $this->renderHtml($e);
         }
+    }
+
+    private function logThrowable(\Throwable $e): void
+    {
+        $path = $this->resolveLogFile();
+        if ($path === null) {
+            return;
+        }
+
+        $type = $e instanceof \ErrorException ? $this->errorLevelToString($e->getSeverity()) : get_class($e);
+        [$file, $line] = $this->resolveDisplayFrame($e);
+        $timestamp = date('c');
+
+        $message = sprintf('[%s] %s: %s in %s:%d', $timestamp, $type, $e->getMessage(), $file, $line);
+        $trace = $this->formatTraceText($e);
+        if ($trace !== '') {
+            $message .= PHP_EOL . $trace;
+        }
+
+        $message .= str_repeat(PHP_EOL, 2);
+
+        // Suppress warnings to avoid re-entrancy into the handler when writing fails.
+        @file_put_contents($path, $message, FILE_APPEND);
+    }
+
+    private function resolveLogFile(): ?string
+    {
+        $cwd = getcwd();
+        if (is_string($cwd) && $cwd !== '') {
+            return rtrim($cwd, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'pretty_errors.txt';
+        }
+
+        $tmp = sys_get_temp_dir();
+        if (!is_string($tmp) || $tmp === '') {
+            return null;
+        }
+
+        return rtrim($tmp, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'pretty_errors.txt';
     }
 
     private function renderCli(\Throwable $e): void

@@ -236,6 +236,7 @@ new PrettyErrorHandler([
     'show_trace' => true,       // include stack trace
     'overlay' => true,          // render as dismissible overlay (set false for full page)
     'skip_warnings' => false,   // bypass handler for PHP warnings
+    'log_errors' => false,      // append errors to pretty_errors.txt
 ]);
 
 // Or via static helper
@@ -244,6 +245,8 @@ new PrettyErrorHandler([
 // Trigger an error to see output (example):
 // echo $undefinedVar; // Notice with highlighted snippet
 ```
+
+When `'log_errors' => true`, each rendered error is appended to `pretty_errors.txt` in the current working directory (falling back to the system temp directory if the current directory is unavailable).
 
 ## Transactions
 

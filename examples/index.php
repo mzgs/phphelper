@@ -10,15 +10,19 @@ require_once __DIR__ . '/../src/Format.php';
 require_once __DIR__ . '/../src/AIChat.php';
 require_once __DIR__ . '/../src/App.php';
 require_once __DIR__ . '/../vendor/autoload.php';
-PrettyErrorHandler::enable();
 
 
 if (App::isProduction()) {
     DB::mysql('phphelper', 'root', '1');
+    PrettyErrorHandler::enable(['display' => false, 'log_errors' => true]);
+
 } else {
     DB::mysql('phphelper', 'root', '1');
+    PrettyErrorHandler::enable(['display' => true, 'log_errors' => false]);
+
 }   
 
+sdfsdf
 
 // DB::getRow('SELECT * FROM users');
 
@@ -28,6 +32,8 @@ AuthManager::init([
     'password_column' => 'password',
     
 ]);
+
+echo $sdfsd;
 
 // AuthManager::createUsersTable();
 // AuthManager::register('new@example.com', '1');
