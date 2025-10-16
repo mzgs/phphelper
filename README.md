@@ -1203,11 +1203,15 @@ Database-backed logging system with multiple severity levels.
 ```php
 Logs::init([
     'table' => 'logs',                    // Log table name
-    'defaults' => [                       // Default fields for all logs
+    'context_defaults' => [               // Data merged into every context payload
         'application' => 'MyApp',
         'environment' => 'production',
-        'user_id' => getCurrentUserId()
-    ]
+        'user_id' => getCurrentUserId(),
+    ],
+    'meta_defaults' => [                  // Data merged into every meta payload
+        'request_id' => $_SERVER['HTTP_X_REQUEST_ID'] ?? null,
+        'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
+    ],
 ]);
 ```
 
@@ -1220,10 +1224,13 @@ Initialize logging system.
 DB::sqlite(':memory:');
 Logs::init([
     'table' => 'application_logs',
-    'defaults' => [
+    'context_defaults' => [
         'app_version' => '1.0.0',
-        'server' => $_SERVER['SERVER_NAME'] ?? 'unknown'
-    ]
+        'server' => $_SERVER['SERVER_NAME'] ?? 'unknown',
+    ],
+    'meta_defaults' => [
+        'environment' => getenv('APP_ENV') ?: 'local',
+    ],
 ]);
 ```
 
@@ -1281,14 +1288,23 @@ Logs::alert('Security breach detected', ['ip' => '192.168.1.100', 'attempts' => 
 Logs::emergency('System shutdown imminent', ['reason' => 'memory_exhausted']);
 ```
 
-#### `setDefaults(array $defaults): void`
-Set default fields for all logs.
+#### `setContextDefaults(array $defaults): void`
+Merge values into every context payload.
 
 ```php
-Logs::setDefaults([
+Logs::setContextDefaults([
     'user_id' => getCurrentUserId(),
     'session_id' => session_id(),
-    'request_id' => uniqid()
+]);
+```
+
+#### `setMetaDefaults(array $defaults): void`
+Merge values into every meta payload.
+
+```php
+Logs::setMetaDefaults([
+    'request_id' => uniqid(),
+    'server' => $_SERVER['SERVER_NAME'] ?? 'unknown',
 ]);
 ```
 
@@ -1793,11 +1809,14 @@ if (App::isLocal()) {
 ```php
 // Set up logging with defaults
 Logs::init([
-    'defaults' => [
+    'context_defaults' => [
         'application' => 'MyApp',
         'environment' => App::isProduction() ? 'prod' : 'dev',
-        'user_id' => AuthManager::user()['id'] ?? null
-    ]
+        'user_id' => AuthManager::user()['id'] ?? null,
+    ],
+    'meta_defaults' => [
+        'request_id' => Request::id(),
+    ],
 ]);
 
 // Create table once
@@ -1836,4 +1855,3 @@ TwigHelper::init([
 TwigHelper::addGlobal('site_name', Config::get('site.name'));
 TwigHelper::addGlobal('current_user', AuthManager::user());
 ```
-

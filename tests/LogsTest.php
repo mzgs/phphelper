@@ -34,6 +34,38 @@ final class LogsTest extends TestCase
         parent::tearDown();
     }
 
+    public function testContextAndMetaDefaultsAreApplied(): void
+    {
+        Logs::setContextDefaults([
+            'application' => 'TestApp',
+            'user_id' => 100,
+        ]);
+
+        Logs::setMetaDefaults([
+            'request_id' => 'req-default',
+            'ip' => '0.0.0.0',
+        ]);
+
+        $id = Logs::info('Defaults example', ['user_id' => 200], ['ip' => '127.0.0.1']);
+
+        $row = DB::getRow('SELECT context, meta FROM logs WHERE id = :id', ['id' => $id]);
+        $this->assertNotNull($row);
+
+        $context = json_decode((string) $row['context'], true);
+        $this->assertIsArray($context);
+        $this->assertSame([
+            'application' => 'TestApp',
+            'user_id' => 200,
+        ], $context);
+
+        $meta = json_decode((string) $row['meta'], true);
+        $this->assertIsArray($meta);
+        $this->assertSame([
+            'request_id' => 'req-default',
+            'ip' => '127.0.0.1',
+        ], $meta);
+    }
+
     public function testLogInsertsRowWithJsonContextAndMeta(): void
     {
         $id = Logs::log('INFO', 'User login', ['user_id' => 42], ['ip' => '127.0.0.1']);

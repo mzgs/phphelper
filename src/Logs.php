@@ -13,12 +13,19 @@ class Logs
     protected static string $table = 'logs';
 
     /** @var array<string, mixed> */
-    protected static array $defaults = [];
+    protected static array $contextDefaults = [];
+
+    /** @var array<string, mixed> */
+    protected static array $metaDefaults = [];
 
     /**
      * Initialize the logger.
      *
-     * @param array{table?: string, defaults?: array<string, mixed>} $config
+     * @param array{
+     *     table?: string,
+     *     context_defaults?: array<string, mixed>,
+     *     meta_defaults?: array<string, mixed>
+     * } $config
      */
     public static function init(array $config = []): void
     {
@@ -26,11 +33,18 @@ class Logs
             self::setTable($config['table']);
         }
 
-        if (isset($config['defaults'])) {
-            if (!is_array($config['defaults'])) {
-                throw new InvalidArgumentException('The "defaults" option must be an array.');
+        if (isset($config['context_defaults'])) {
+            if (!is_array($config['context_defaults'])) {
+                throw new InvalidArgumentException('The "context_defaults" option must be an array.');
             }
-            self::setDefaults($config['defaults']);
+            self::setContextDefaults($config['context_defaults']);
+        }
+
+        if (isset($config['meta_defaults'])) {
+            if (!is_array($config['meta_defaults'])) {
+                throw new InvalidArgumentException('The "meta_defaults" option must be an array.');
+            }
+            self::setMetaDefaults($config['meta_defaults']);
         }
     }
 
@@ -46,20 +60,35 @@ class Logs
     /**
      * @param array<string, mixed> $defaults
      */
-    public static function setDefaults(array $defaults): void
+    public static function setContextDefaults(array $defaults): void
     {
-        foreach ($defaults as $key => $_) {
-            if (!is_string($key) || $key === '') {
-                throw new InvalidArgumentException('Default keys must be non-empty strings.');
-            }
-        }
+        self::assertDefaultKeys($defaults, 'context');
+        self::$contextDefaults = array_merge(self::$contextDefaults, $defaults);
+    }
 
-        self::$defaults = array_merge(self::$defaults, $defaults);
+    public static function clearContextDefaults(): void
+    {
+        self::$contextDefaults = [];
+    }
+
+    /**
+     * @param array<string, mixed> $defaults
+     */
+    public static function setMetaDefaults(array $defaults): void
+    {
+        self::assertDefaultKeys($defaults, 'meta');
+        self::$metaDefaults = array_merge(self::$metaDefaults, $defaults);
+    }
+
+    public static function clearMetaDefaults(): void
+    {
+        self::$metaDefaults = [];
     }
 
     public static function clearDefaults(): void
     {
-        self::$defaults = [];
+        self::clearContextDefaults();
+        self::clearMetaDefaults();
     }
 
     /**
@@ -80,12 +109,12 @@ class Logs
             throw new InvalidArgumentException('Log message cannot be empty.');
         }
 
-        $record = array_merge(self::$defaults, [
+        $record = [
             'level' => $level,
             'message' => $message,
-            'context' => self::encodeOptional($context),
-            'meta' => self::encodeOptional($meta),
-        ]);
+            'context' => self::encodeOptional(self::withContextDefaults($context)),
+            'meta' => self::encodeOptional(self::withMetaDefaults($meta)),
+        ];
 
 
         if (!array_key_exists('created_at', $record)) {
@@ -234,5 +263,43 @@ SQL;
     protected static function removeNulls(array $record): array
     {
         return array_filter($record, static fn ($value) => $value !== null);
+    }
+
+    /**
+     * @param array<mixed> $context
+     * @return array<mixed>
+     */
+    protected static function withContextDefaults(array $context): array
+    {
+        if ($context === []) {
+            return self::$contextDefaults;
+        }
+
+        return array_merge(self::$contextDefaults, $context);
+    }
+
+    /**
+     * @param array<mixed> $meta
+     * @return array<mixed>
+     */
+    protected static function withMetaDefaults(array $meta): array
+    {
+        if ($meta === []) {
+            return self::$metaDefaults;
+        }
+
+        return array_merge(self::$metaDefaults, $meta);
+    }
+
+    /**
+     * @param array<mixed> $defaults
+     */
+    protected static function assertDefaultKeys(array $defaults, string $type): void
+    {
+        foreach ($defaults as $key => $_) {
+            if (!is_string($key) || $key === '') {
+                throw new InvalidArgumentException("{$type} default keys must be non-empty strings.");
+            }
+        }
     }
 }
