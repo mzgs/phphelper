@@ -15,7 +15,7 @@ function dd(...$vars): void
 
   function pl($v)
     {
-        print ("<pre>" . print_r($v, true) . "</pre>");
+        Str::prettyLog($v);
     }
 
 
