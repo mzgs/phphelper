@@ -29,16 +29,16 @@ AuthManager::init([
 
 //  Str::prettyLog( AuthManager::user()['email'] );
 
-AIChat::init([
-    'api_key' => getenv('OPENAI_API_KEY'),
-    'model' => 'gpt-4o-mini',
-]);
+// AIChat::init([
+//     'api_key' => getenv('OPENAI_API_KEY'),
+//     'model' => 'gpt-4o-mini',
+// ]);
 
-$res = AIChat::reply(
-    'summary word highest mountain with this json format { "mountain": "name", "height": 111 }',
+// $res = AIChat::reply(
+//     'summary word highest mountain with this json format { "mountain": "name", "height": 111 }',
     
-);
-Str::prettyLog($res);
+// );
+// Str::prettyLog($res);
 
 Config::init();
 Config::createConfigTable();
