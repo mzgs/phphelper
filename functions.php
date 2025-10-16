@@ -1,15 +1,16 @@
 <?php
 
-  use Mzgs\PhpHelper\Str; 
+use PhpHelper\Str;
 
-  function blackBG()
+
+function blackBG()
     {
         echo "<!DOCTYPE html><html><head><style>body { background-color: black; color: #eee; }</style></head><body></body></html>";
     }
 
   function pl($v)
     {
-        Mzgs\PhpHelper\Str::prettyLog($v);
+       Str::prettyLog($v);
     }
 
 
