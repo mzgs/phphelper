@@ -1,6 +1,6 @@
 <?php
 
-use Str;
+  use Mzgs\PhpHelper\Str; 
 
   function blackBG()
     {
@@ -9,7 +9,7 @@ use Str;
 
   function pl($v)
     {
-        Str::prettyLog($v);
+        Mzgs\PhpHelper\Str::prettyLog($v);
     }
 
 
