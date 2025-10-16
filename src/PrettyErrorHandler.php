@@ -41,7 +41,7 @@ class PrettyErrorHandler
     /**
      * Convenient static helper to enable the handler in one call.
      */
-    public static function enable(array $options = []): self
+    public static function init(array $options = []): self
     {
         return new self($options, true);
     }

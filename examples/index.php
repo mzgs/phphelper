@@ -7,6 +7,7 @@ use PhpHelper\AIChat;
 use PhpHelper\Config;
 use PhpHelper\TwigHelper;
 use PhpHelper\AuthManager;
+use PhpHelper\Logs;
 use PhpHelper\PrettyErrorHandler;
 require_once __DIR__ . '/../vendor/autoload.php';
 
@@ -58,6 +59,7 @@ AuthManager::init([
 Config::init();
 Config::createConfigTable();
 Config::set('site_name', 'PHP Helper');
+
 
 
 

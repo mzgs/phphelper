@@ -16,11 +16,11 @@ class Logs
     protected static array $defaults = [];
 
     /**
-     * Configure the logger.
+     * Initialize the logger.
      *
      * @param array{table?: string, defaults?: array<string, mixed>} $config
      */
-    public static function configure(array $config = []): void
+    public static function init(array $config = []): void
     {
         if (isset($config['table'])) {
             self::setTable($config['table']);
@@ -110,6 +110,12 @@ class Logs
     public static function info(string $message, array $context = [], array $meta = []): string
     {
         return self::log('info', $message, $context, $meta);
+    }
+
+    /** @param array<mixed> $context @param array<mixed> $meta */
+    public static function success(string $message, array $context = [], array $meta = []): string
+    {
+        return self::log('success', $message, $context, $meta);
     }
 
     /** @param array<mixed> $context @param array<mixed> $meta */

@@ -54,6 +54,26 @@ final class LogsTest extends TestCase
         $this->assertSame(['ip' => '127.0.0.1'], $meta);
     }
 
+    public function testSuccessConvenienceMethodPersistsRecord(): void
+    {
+        $id = Logs::success('Action completed', ['user_id' => 8], ['job_id' => 'abc']);
+
+        $this->assertSame('1', $id);
+
+        $row = DB::getRow('SELECT level, message, context, meta FROM logs WHERE id = :id', ['id' => $id]);
+        $this->assertNotNull($row);
+        $this->assertSame('success', $row['level']);
+        $this->assertSame('Action completed', $row['message']);
+
+        $context = json_decode((string) $row['context'], true);
+        $this->assertIsArray($context);
+        $this->assertSame(['user_id' => 8], $context);
+
+        $meta = json_decode((string) $row['meta'], true);
+        $this->assertIsArray($meta);
+        $this->assertSame(['job_id' => 'abc'], $meta);
+    }
+
     public function testEnsureTableCreatesStructureOnSqlite(): void
     {
         DB::execute('DROP TABLE logs');
