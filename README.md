@@ -19,15 +19,16 @@ composer require mzgs/phphelper:dev-main
 3. [Arrays](#arrays) - Array manipulation and utilities
 4. [AuthManager](#authmanager) - User authentication and session management
 5. [Config](#config) - Configuration management with database storage
-6. [DB](#db) - Database abstraction layer for PDO
-7. [Date](#date) - Date and time formatting utilities
-8. [Files](#files) - File system operations
-9. [Format](#format) - Data formatting utilities
-10. [Http](#http) - HTTP utilities and client information
-11. [Logs](#logs) - Logging system with database storage
-12. [PrettyErrorHandler](#prettyerrorhandler) - Enhanced error display
-13. [Str](#str) - String manipulation utilities
-14. [TwigHelper](#twighelper) - Twig template engine integration
+6. [Countries](#countries) - Country data with flags, ISO codes, and names
+7. [DB](#db) - Database abstraction layer for PDO
+8. [Date](#date) - Date and time formatting utilities
+9. [Files](#files) - File system operations
+10. [Format](#format) - Data formatting utilities
+11. [Http](#http) - HTTP utilities and client information
+12. [Logs](#logs) - Logging system with database storage
+13. [PrettyErrorHandler](#prettyerrorhandler) - Enhanced error display
+14. [Str](#str) - String manipulation utilities
+15. [TwigHelper](#twighelper) - Twig template engine integration
 
 ---
 
@@ -556,6 +557,66 @@ $allConfig = Config::all();
 foreach ($allConfig as $key => $value) {
     echo "$key = $value\n";
 }
+```
+
+---
+
+## Countries
+
+Country data with flags, ISO codes, and names.
+
+### Methods
+
+#### `getAll(): array`
+Get all countries array.
+
+```php
+$countries = Countries::getAll();
+```
+
+#### `getByCode(string $code): ?array`
+Get country by ISO/ISO3 code.
+
+```php
+$country = Countries::getByCode('US'); // ["flag" => "🇺🇸", "name" => "United States"]
+$country = Countries::getByCode('USA'); // Same result
+$country = Countries::getByCode('DE'); // ["flag" => "🇩🇪", "name" => "Germany"]
+```
+
+#### `getByName(string $name): ?array`
+Get country by name.
+
+```php
+$country = Countries::getByName('France'); // ["flag" => "🇫🇷", "name" => "France"]
+```
+
+#### `nameWithFlag(string $code): ?string`
+Get formatted name with flag.
+
+```php
+echo Countries::nameWithFlag('JP'); // "🇯🇵 Japan"
+echo Countries::nameWithFlag('BRA'); // "🇧🇷 Brazil"
+```
+
+### Usage Examples
+
+```php
+// Country dropdown
+$countries = Countries::getAll();
+foreach ($countries as $code => $data) {
+    if (strlen($code) === 2) { // ISO codes only
+        echo "<option value='{$code}'>{$data['flag']} {$data['name']}</option>";
+    }
+}
+
+// Validate country code
+if (Countries::getByCode($_POST['country'])) {
+    // Valid country
+}
+
+// Display user country
+$userCountry = Countries::nameWithFlag($user['country_code']);
+echo "From: {$userCountry}";
 ```
 
 ---
