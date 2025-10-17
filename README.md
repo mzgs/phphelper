@@ -29,6 +29,7 @@ composer require mzgs/phphelper:dev-main
 13. [PrettyErrorHandler](#prettyerrorhandler) - Enhanced error display
 14. [Str](#str) - String manipulation utilities
 15. [TwigHelper](#twighelper) - Twig template engine integration
+16. [Example index.php](#example-indexphp) - Complete application setup example
 
 ---
 
@@ -2709,7 +2710,7 @@ Str::print_functions($myObject); // Shows all available methods
 
 require_once 'vendor/autoload.php';
 
-use PhpHelper\{DB, AuthManager, Config, Logs, PrettyErrorHandler, TwigHelper, Http};
+use PhpHelper\{DB, App, AuthManager, Config, Logs, PrettyErrorHandler, TwigHelper, Http};
 use Bramus\Router\Router;
 
 
