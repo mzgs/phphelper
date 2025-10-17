@@ -86,13 +86,17 @@ try {
 
 $router = new Router();
 
-$router->before('GET|POST|PUT|DELETE', '/admin(/.*)?',  AuthManager::requireAuth(fn() => Http::redirect('/login',302,true)));
+$router->before('GET|POST|PUT|DELETE', '/admin(/.*)?', fn() => AuthManager::requireAuth(fn() => Http::redirect('/login',302,true)));
 
 // Set custom 404 handler
 $router->set404(fn() => throw new \Exception("The requested page could not be found 404: " .
     ($_SERVER['REQUEST_URI'] ?? 'unknown'), 404));
 
-include 'routes.php';
+// include 'routes.php';
+
+$router->get('/', function() {
+    echo "test";    
+});
 
 $router->run();
 
