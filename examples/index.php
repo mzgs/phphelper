@@ -26,11 +26,9 @@ else {
     $db = "phphelper1";
     $user = "root";
     $pass = "1";
-    if (App::isCli()) {
-        // DB::restore($db, $user, $pass);
-        // DB::backup($db, $user, $pass);
-        return;
-    }
+    
+    DB::cliBackupRestore($db, $user, $pass);
+          
 
     DB::mysql($db, $user, $pass);
     PrettyErrorHandler::init(['display' => true, 'log_errors' => false]);
