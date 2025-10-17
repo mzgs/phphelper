@@ -4,8 +4,7 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
-
-require_once __DIR__ . '/../src/TwigHelper.php';
+use PhpHelper\TwigHelper;
 
 final class TwigHelperTest extends TestCase
 {

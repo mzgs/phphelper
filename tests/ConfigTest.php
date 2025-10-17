@@ -2,9 +2,8 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
-
-require_once __DIR__ . '/../src/DB.php';
-require_once __DIR__ . '/../src/Config.php';
+use PhpHelper\DB;
+use PhpHelper\Config;
 
 final class ConfigTest extends TestCase
 {

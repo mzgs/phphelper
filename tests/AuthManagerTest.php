@@ -2,9 +2,8 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
-
-require_once __DIR__ . '/../src/DB.php';
-require_once __DIR__ . '/../src/AuthManager.php';
+use PhpHelper\DB;
+use PhpHelper\AuthManager;
 
 final class AuthManagerTest extends TestCase
 {

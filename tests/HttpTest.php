@@ -2,8 +2,7 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
-
-require_once __DIR__ . '/../src/Http.php';
+use PhpHelper\Http;
 
 final class HttpTest extends TestCase
 {

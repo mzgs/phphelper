@@ -513,8 +513,8 @@ class Str
         $hasTransliteration = false;
 
         if (class_exists('Transliterator')) {
-            $transliterator = Transliterator::createFromRules(':: Any-Latin; :: Latin-ASCII; :: NFD; :: [:Nonspacing Mark:] Remove; :: Lower(); :: NFC;', Transliterator::FORWARD);
-            if ($transliterator instanceof Transliterator) {
+            $transliterator = \Transliterator::createFromRules(':: Any-Latin; :: Latin-ASCII; :: NFD; :: [:Nonspacing Mark:] Remove; :: Lower(); :: NFC;', \Transliterator::FORWARD);
+            if ($transliterator instanceof \Transliterator) {
                 $result = $transliterator->transliterate($text);
                 if (is_string($result)) {
                     $normalized = $result;

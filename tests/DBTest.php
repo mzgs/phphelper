@@ -2,8 +2,7 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
-
-require_once __DIR__ . '/../src/DB.php';
+use PhpHelper\DB;
 
 final class DBTest extends TestCase
 {

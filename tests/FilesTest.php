@@ -2,8 +2,7 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
-
-require_once __DIR__ . '/../src/Files.php';
+use PhpHelper\Files;
 
 final class FilesTest extends TestCase
 {
