@@ -2687,3 +2687,46 @@ Display all methods of an object.
 ```php
 Str::print_functions($myObject); // Shows all available methods
 ```
+
+---
+
+## Example index.php
+
+```php
+<?php
+
+require_once 'vendor/autoload.php';
+
+use PhpHelper\{DB, AuthManager, Config, Logs, PrettyErrorHandler, TwigHelper, Http};
+
+
+// ---- PRODUCTION ----
+if (App::isProduction()) {
+    PrettyErrorHandler::init(['display' => false, 'log_errors' => true]);
+    DB::mysql('phphelper', 'root', '1');
+
+} 
+// ---- LOCAL ----
+else {
+    DB::cliBackupRestore('phphelper', 'root', '1');
+    PrettyErrorHandler::init(['display' => true, 'log_errors' => false]);
+    DB::mysql('phphelper', 'root', '1');
+}   
+
+// Initialize authentication system
+AuthManager::init();
+AuthManager::createUsersTable();
+
+// Initialize configuration system
+Config::init();
+Config::createConfigTable();
+
+// Initialize logging system
+Logs::init();
+Logs::createLogsTable();
+
+TwigHelper::init('templates');
+
+ 
+ 
+```
