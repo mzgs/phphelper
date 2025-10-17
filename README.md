@@ -696,6 +696,18 @@ if (AuthManager::isLoggedIn()) {
 }
 ```
 
+#### `requireAuth(?callable $onUnauthenticated = null): array`
+Ensure a user is authenticated.
+
+```php
+$user = AuthManager::requireAuth();
+
+// With custom unauthenticated handler
+AuthManager::requireAuth(function () {
+    Http::redirect('/login');
+});
+```
+
 ---
 
 ## Config
@@ -2698,6 +2710,8 @@ Str::print_functions($myObject); // Shows all available methods
 require_once 'vendor/autoload.php';
 
 use PhpHelper\{DB, AuthManager, Config, Logs, PrettyErrorHandler, TwigHelper, Http};
+use Bramus\Router\Router;
+
 
 
 // ---- PRODUCTION ----
@@ -2726,6 +2740,20 @@ Logs::init();
 Logs::createLogsTable();
 
 TwigHelper::init('templates');
+
+// ------ Initialize routers --------
+$router = new Router();
+
+$router->before('GET|POST|PUT|DELETE', '/admin(/.*)?',  AuthManager::requireAuth(fn() => Http::redirect('/login',302,true)));
+
+// Set custom 404 handler
+$router->set404(fn() => throw new \Exception("The requested page could not be found 404: " .
+    ($_SERVER['REQUEST_URI'] ?? 'unknown'), 404));
+
+include 'routes.php';
+
+$router->run();
+
 
  
  

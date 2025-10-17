@@ -3,12 +3,14 @@
 use PhpHelper\DB;
 use PhpHelper\App;
 use PhpHelper\Str;
+use PhpHelper\Logs;
 use PhpHelper\AIChat;
 use PhpHelper\Config;
+use PhpHelper\Countries;
+use Bramus\Router\Router;
 use PhpHelper\TwigHelper;
 use PhpHelper\AuthManager;
-use PhpHelper\Countries;
-use PhpHelper\Logs;
+use PhpHelper\Http;
 use PhpHelper\PrettyErrorHandler;
 require_once __DIR__ . '/../vendor/autoload.php';
 
@@ -82,6 +84,17 @@ try {
         . htmlspecialchars($twigError->getMessage(), ENT_QUOTES) . '</div>';
 }
 
+$router = new Router();
+
+$router->before('GET|POST|PUT|DELETE', '/admin(/.*)?',  AuthManager::requireAuth(fn() => Http::redirect('/login',302,true)));
+
+// Set custom 404 handler
+$router->set404(fn() => throw new \Exception("The requested page could not be found 404: " .
+    ($_SERVER['REQUEST_URI'] ?? 'unknown'), 404));
+
+include 'routes.php';
+
+$router->run();
 
 ?>
 <!doctype html>

@@ -15,6 +15,11 @@ final class AuthManagerTest extends TestCase
             session_write_close();
         }
 
+        $savePath = session_save_path();
+        if (!is_string($savePath) || $savePath === '' || !is_dir($savePath) || !is_writable($savePath)) {
+            session_save_path(sys_get_temp_dir());
+        }
+
         $_SESSION = [];
         $_COOKIE = [];
 
@@ -94,5 +99,42 @@ final class AuthManagerTest extends TestCase
         $this->assertNotNull($user);
         $this->assertSame('remember@example.com', $user['email']);
         $this->assertSame($user, $_SESSION['auth_user_for_tests']);
+    }
+
+    public function testRequireAuthReturnsCurrentUser(): void
+    {
+        $this->initManager();
+
+        $registered = AuthManager::register('required@example.com', 'secret123');
+
+        $this->assertSame($registered, AuthManager::requireAuth());
+    }
+
+    public function testRequireAuthThrowsWhenNotAuthenticated(): void
+    {
+        $this->initManager();
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Authentication required.');
+
+        AuthManager::requireAuth();
+    }
+
+    public function testRequireAuthInvokesHandlerBeforeThrow(): void
+    {
+        $this->initManager();
+
+        $invoked = false;
+
+        try {
+            AuthManager::requireAuth(function () use (&$invoked): void {
+                $invoked = true;
+            });
+            $this->fail('Expected RuntimeException was not thrown.');
+        } catch (\RuntimeException $exception) {
+            $this->assertSame('Authentication required.', $exception->getMessage());
+        }
+
+        $this->assertTrue($invoked, 'Unauthenticated handler was not invoked.');
     }
 }

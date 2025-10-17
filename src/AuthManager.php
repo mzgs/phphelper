@@ -286,6 +286,31 @@ class AuthManager
     }
 
     /**
+     * Ensure a user is authenticated and return their sanitized record.
+     *
+     * The optional handler is invoked when unauthenticated (for example to
+     * trigger a redirect) before an exception is thrown.
+     *
+     * @param callable|null $onUnauthenticated
+     * @return array<string, mixed>
+     */
+    public static function requireAuth(?callable $onUnauthenticated = null): array
+    {
+        self::ensureInitialized();
+
+        $user = self::user();
+        if ($user !== null) {
+            return $user;
+        }
+
+        if ($onUnauthenticated !== null) {
+            $onUnauthenticated();
+        }
+
+        throw new RuntimeException('Authentication required.');
+    }
+
+    /**
      * Persist the authenticated user details to session/cookie stores.
      *
      * @param array<string, mixed>|null $sanitized
