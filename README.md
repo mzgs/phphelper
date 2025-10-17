@@ -2140,3 +2140,550 @@ TwigHelper::init([
 TwigHelper::addGlobal('site_name', Config::get('site.name'));
 TwigHelper::addGlobal('current_user', AuthManager::user());
 ```
+
+---
+
+## Date
+
+The Date class provides utilities for formatting dates and times with human-friendly options.
+
+#### `ago(\DateTimeInterface|int|string $timestamp, bool $full = false): string`
+Human friendly relative time (e.g., "2 hours ago", "in 3 days").
+
+```php
+use PhpHelper\Date;
+
+echo Date::ago('2023-01-01'); // "11 months ago"
+echo Date::ago(time() - 3600); // "1 hour ago"
+echo Date::ago('2023-12-25', true); // "1 year, 2 months and 3 days ago"
+```
+
+#### `format(\DateTimeInterface|int|string $timestamp, string $format = 'datetime', ?string $timezone = null): string`
+Easy date/time formatting with sensible presets.
+
+```php
+$date = '2023-12-25 15:30:45';
+
+echo Date::format($date); // "2023-12-25 15:30"
+echo Date::format($date, 'date'); // "2023-12-25"
+echo Date::format($date, 'human'); // "25 Dec 2023"
+echo Date::format($date, 'iso'); // ISO 8601 format
+echo Date::format($date, 'Y-m-d H:i:s', 'America/New_York'); // With timezone
+```
+
+#### `timestamp(\DateTimeInterface|int|string|null $value = null, ?string $timezone = null): int`
+Get a UNIX timestamp from various input types.
+
+```php
+echo Date::timestamp(); // Current timestamp
+echo Date::timestamp('2023-12-25'); // Timestamp for date
+echo Date::timestamp('2023-12-25 15:30', 'Europe/London'); // With timezone
+```
+
+---
+
+## Files
+
+The Files class provides comprehensive file and directory operations.
+
+#### `read(string $path): string|false`
+Read file contents.
+
+```php
+use PhpHelper\Files;
+
+$content = Files::read('/path/to/file.txt');
+if ($content !== false) {
+    echo $content;
+}
+```
+
+#### `write(string $path, string $content, int $flags = 0): int|false`
+Write contents to file (creates directories if needed).
+
+```php
+$bytes = Files::write('/path/to/file.txt', 'Hello World');
+$bytes = Files::write('/path/to/file.txt', 'Append this', FILE_APPEND);
+```
+
+#### `append(string $path, string $content): int|false`
+Append contents to file.
+
+```php
+Files::append('/path/to/log.txt', "New log entry\n");
+```
+
+#### `delete(string $path): bool`
+Delete file.
+
+```php
+if (Files::delete('/path/to/old-file.txt')) {
+    echo "File deleted successfully";
+}
+```
+
+#### `copy(string $source, string $dest): bool`
+Copy file (creates destination directories if needed).
+
+```php
+Files::copy('/source/file.txt', '/backup/file.txt');
+```
+
+#### `move(string $source, string $dest): bool`
+Move/rename file.
+
+```php
+Files::move('/old/path/file.txt', '/new/path/file.txt');
+```
+
+#### `exists(string $path): bool`
+Check if file exists.
+
+```php
+if (Files::exists('/path/to/file.txt')) {
+    echo "File exists";
+}
+```
+
+#### `size(string $path): int|false`
+Get file size in bytes.
+
+```php
+$bytes = Files::size('/path/to/file.txt');
+echo "File size: $bytes bytes";
+```
+
+#### `extension(string $path): string`
+Get file extension.
+
+```php
+echo Files::extension('/path/to/document.pdf'); // "pdf"
+```
+
+#### `mimeType(string $path): string|false`
+Get file MIME type.
+
+```php
+echo Files::mimeType('/path/to/image.jpg'); // "image/jpeg"
+```
+
+#### `modifiedTime(string $path): int|false`
+Get file modification time.
+
+```php
+$timestamp = Files::modifiedTime('/path/to/file.txt');
+echo date('Y-m-d H:i:s', $timestamp);
+```
+
+#### `createDirectory(string $path, int $permissions = 0755): bool`
+Create directory recursively.
+
+```php
+Files::createDirectory('/path/to/new/directory');
+```
+
+#### `deleteDirectory(string $path): bool`
+Delete directory recursively.
+
+```php
+Files::deleteDirectory('/path/to/directory');
+```
+
+#### `listFiles(string $path, string $pattern = '*'): array`
+List files in directory.
+
+```php
+$files = Files::listFiles('/path/to/directory');
+$phpFiles = Files::listFiles('/src', '*.php');
+```
+
+#### `listDirectories(string $path): array`
+List directories.
+
+```php
+$dirs = Files::listDirectories('/path/to/parent');
+```
+
+#### `readJson(string $path): mixed`
+Read JSON file.
+
+```php
+$data = Files::readJson('/path/to/data.json');
+```
+
+#### `writeJson(string $path, mixed $data, int $flags = JSON_PRETTY_PRINT): int|false`
+Write JSON file.
+
+```php
+$data = ['name' => 'John', 'age' => 30];
+Files::writeJson('/path/to/data.json', $data);
+```
+
+#### `readCsv(string $path, string $delimiter = ',', string $enclosure = '"', string $escape = '\\'): array|false`
+Read CSV file.
+
+```php
+$rows = Files::readCsv('/path/to/data.csv');
+```
+
+#### `writeCsv(string $path, array $data, string $delimiter = ',', string $enclosure = '"', string $escape = '\\'): bool`
+Write CSV file.
+
+```php
+$data = [
+    ['Name', 'Age', 'City'],
+    ['John', 30, 'New York'],
+    ['Jane', 25, 'London']
+];
+Files::writeCsv('/path/to/data.csv', $data);
+```
+
+#### `hash(string $path, string $algo = 'sha256'): string|false`
+Get file hash.
+
+```php
+$hash = Files::hash('/path/to/file.txt');
+$md5 = Files::hash('/path/to/file.txt', 'md5');
+```
+
+#### `isAbsolute(string $path): bool`
+Check if path is absolute.
+
+```php
+echo Files::isAbsolute('/absolute/path'); // true
+echo Files::isAbsolute('relative/path'); // false
+```
+
+#### `normalizePath(string $path): string`
+Normalize path separators.
+
+```php
+echo Files::normalizePath('path\\to\\file'); // Uses correct separator for OS
+```
+
+#### `joinPaths(string ...$parts): string`
+Join path parts.
+
+```php
+$path = Files::joinPaths('/base', 'subdir', 'file.txt');
+// Result: "/base/subdir/file.txt" (with correct separators)
+```
+
+---
+
+## Format
+
+The Format class provides utilities for formatting numbers, bytes, currency, and other data types.
+
+#### `bytes(int $bytes, int $precision = 2, string $system = 'binary', ?array $units = null): string`
+Format bytes into human readable string.
+
+```php
+use PhpHelper\Format;
+
+echo Format::bytes(1536); // "1.50 KB"
+echo Format::bytes(1048576, 1, 'binary'); // "1.0 MB"
+echo Format::bytes(1000000, 2, 'si'); // "1.00 MB" (1000-based)
+echo Format::bytes(1024, 0, 'iec'); // "1 KiB"
+```
+
+#### `number(float|int $value, int $decimals = 0, string $decimalPoint = '.', string $thousandsSep = ','): string`
+Standard number formatting.
+
+```php
+echo Format::number(1234567.89, 2); // "1,234,567.89"
+echo Format::number(1234567.89, 0); // "1,234,568"
+```
+
+#### `currency(float $amount, string $currency = 'USD', ?string $locale = null, ?int $precision = null): string`
+Format currency amount.
+
+```php
+echo Format::currency(1234.56); // "$1,234.56" (if intl available)
+echo Format::currency(1234.56, 'EUR', 'de_DE'); // "1.234,56 €"
+echo Format::currency(1234.56, 'USD', null, 0); // "$1,235"
+```
+
+#### `percent(float $value, int $precision = 0, bool $fromFraction = true): string`
+Format percentage.
+
+```php
+echo Format::percent(0.1234); // "12%" (from fraction)
+echo Format::percent(12.34, 1, false); // "12.3%" (from percentage)
+```
+
+#### `shortNumber(float|int $value, int $precision = 1): string`
+Humanized abbreviations.
+
+```php
+echo Format::shortNumber(1200); // "1.2K"
+echo Format::shortNumber(1500000); // "1.5M"
+echo Format::shortNumber(2800000000); // "2.8B"
+```
+
+#### `duration(int $seconds, bool $compact = true): string`
+Human time spans.
+
+```php
+echo Format::duration(3661); // "1h 1m 1s"
+echo Format::duration(3661, false); // "1 hour, 1 minute, 1 second"
+```
+
+#### `hms(int $seconds, bool $withDays = false): string`
+Clock format HH:MM:SS.
+
+```php
+echo Format::hms(3661); // "01:01:01"
+echo Format::hms(90061, true); // "1d 01:01:01"
+```
+
+#### `ordinal(int $number): string`
+English ordinal suffix.
+
+```php
+echo Format::ordinal(1); // "1st"
+echo Format::ordinal(22); // "22nd"
+echo Format::ordinal(103); // "103rd"
+```
+
+#### `parseBytes(string $size): int`
+Parse human-readable size into bytes.
+
+```php
+echo Format::parseBytes('2M'); // 2097152
+echo Format::parseBytes('1.5 GB'); // 1610612736
+echo Format::parseBytes('2MiB'); // 2097152
+```
+
+#### `bool(mixed $value, string $true = 'Yes', string $false = 'No', string $null = ''): string`
+Consistent boolean labels.
+
+```php
+echo Format::bool(true); // "Yes"
+echo Format::bool(0); // "No"
+echo Format::bool('1', 'Active', 'Inactive'); // "Active"
+```
+
+#### `json(mixed $value, bool $pretty = true, int $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES): string`
+JSON encode for display.
+
+```php
+$data = ['name' => 'John', 'age' => 30];
+echo Format::json($data); // Pretty formatted JSON
+echo Format::json($data, false); // Compact JSON
+```
+
+---
+
+## Http
+
+The Http class provides utilities for HTTP operations, redirects, downloads, and client information.
+
+#### `redirect(string $url, int $statusCode = 302, bool $exit = true): void`
+Redirect to a URL.
+
+```php
+use PhpHelper\Http;
+
+Http::redirect('/dashboard');
+Http::redirect('https://example.com', 301);
+Http::redirect('/login', 302, false); // Don't exit after redirect
+```
+
+#### `download(string $filename, string $mimetype = 'application/octet-stream')`
+Stream a file as download.
+
+```php
+Http::download('/path/to/file.pdf', 'application/pdf');
+Http::download('/path/to/image.jpg', 'image/jpeg');
+```
+
+#### `json(mixed $data, int $status = 200, array $headers = []): void`
+Send JSON response.
+
+```php
+$data = ['success' => true, 'message' => 'Data saved'];
+Http::json($data);
+Http::json(['error' => 'Not found'], 404);
+Http::json($data, 200, ['X-Custom-Header' => 'value']);
+```
+
+#### `clientInfo(): array`
+Collect comprehensive client information.
+
+```php
+$info = Http::clientInfo();
+
+echo $info['ip']; // Client IP
+echo $info['browser']; // Browser name
+echo $info['os']; // Operating system
+echo $info['device']; // Device type (mobile/tablet/desktop/bot)
+echo $info['user_agent']; // Full user agent string
+
+// Check device types
+if ($info['is_mobile']) {
+    echo "Mobile device detected";
+}
+
+// Language preferences
+$languages = $info['languages']; // Array of preferred languages
+
+// Request information
+echo $info['method']; // HTTP method
+echo $info['url']; // Full URL
+echo $info['referer']; // Referring URL
+```
+
+---
+
+## Logs
+
+The Logs class provides structured database logging with multiple severity levels.
+
+#### `init(array $config = []): void`
+Initialize the logger with configuration.
+
+```php
+use PhpHelper\Logs;
+
+Logs::init([
+    'table' => 'application_logs',
+    'context_defaults' => ['app' => 'myapp'],
+    'meta_defaults' => ['version' => '1.0']
+]);
+```
+
+#### `log(string $level, string $message, array $context = [], array $meta = []): string`
+Log a message with custom level.
+
+```php
+$id = Logs::log('info', 'User logged in', ['user_id' => 123], ['ip' => '192.168.1.1']);
+```
+
+#### Convenience Methods
+All standard log levels are available as methods:
+
+```php
+Logs::debug('Debug information', ['query' => $sql]);
+Logs::info('Information message', ['user_id' => 123]);
+Logs::success('Operation completed successfully');
+Logs::notice('Notice: Cache cleared');
+Logs::warning('Warning: Disk space low', ['available' => '10GB']);
+Logs::error('Database connection failed', ['host' => 'db.server']);
+Logs::critical('Critical system error', ['service' => 'payment']);
+Logs::alert('Alert: Security breach detected');
+Logs::emergency('Emergency: System shutdown required');
+```
+
+#### `createLogsTable(?string $table = null): void`
+Create the logs table (MySQL and SQLite supported).
+
+```php
+Logs::createLogsTable(); // Uses default table name
+Logs::createLogsTable('custom_logs'); // Custom table name
+```
+
+#### Configuration Methods
+
+```php
+Logs::setTable('custom_logs');
+Logs::setContextDefaults(['app' => 'myapp', 'env' => 'production']);
+Logs::setMetaDefaults(['server' => $_SERVER['SERVER_NAME']]);
+Logs::clearDefaults();
+```
+
+---
+
+## PrettyErrorHandler
+
+The PrettyErrorHandler class provides beautiful error pages for development with code context and stack traces.
+
+#### `__construct(array $options = [], bool $registerGlobal = true)`
+Create and optionally register error handler.
+
+```php
+use PhpHelper\PrettyErrorHandler;
+
+// Simple initialization
+$handler = new PrettyErrorHandler();
+
+// With custom options
+$handler = new PrettyErrorHandler([
+    'display' => true,
+    'show_trace' => true,
+    'overlay' => true,
+    'context_before' => 8,
+    'context_after' => 6,
+    'skip_warnings' => false,
+    'log_errors' => true
+], false); // Don't auto-register
+$handler->register(); // Register manually
+```
+
+#### `init(array $options = []): self`
+Static convenience method.
+
+```php
+PrettyErrorHandler::init([
+    'overlay' => false, // Full page instead of overlay
+    'show_trace' => false, // Hide stack trace
+    'log_errors' => true // Log to pretty_errors.txt
+]);
+```
+
+#### Available Options:
+- `display` (bool): Force display errors (default: true)
+- `report` (int): Error reporting level (default: E_ALL)
+- `context_before` (int): Lines before error (default: 6)
+- `context_after` (int): Lines after error (default: 4)
+- `show_trace` (bool): Include stack trace (default: true)
+- `overlay` (bool): Render as overlay vs full page (default: true)
+- `skip_warnings` (bool): Skip PHP warnings (default: false)
+- `log_errors` (bool): Log to pretty_errors.txt (default: false)
+
+---
+
+## Additional Str Methods
+
+The Str class has additional utility methods not previously documented:
+
+#### `seoFileName(string $text): string`
+Create SEO-friendly filename (keeps dots).
+
+```php
+use PhpHelper\Str;
+
+echo Str::seoFileName('My Document File.pdf'); // "my-document-file.pdf"
+echo Str::seoFileName('Αρχείο με Ελληνικά.doc'); // "archeio-me-ellinika.doc"
+```
+
+#### `seoUrl(string $text): string`
+Create SEO-friendly URL (removes dots).
+
+```php
+echo Str::seoUrl('My Article Title!'); // "my-article-title"
+echo Str::seoUrl('Product v2.0 Launch'); // "product-v2-0-launch"
+```
+
+#### Debug Helper Methods
+
+#### `prettyLog(mixed $v): void`
+Pretty print variable with HTML formatting.
+
+```php
+Str::prettyLog($array); // Outputs formatted array in <pre> tags
+```
+
+#### `prettyLogExit(mixed $v): void`
+Pretty print and exit with black background.
+
+```php
+Str::prettyLogExit($debugData); // Debug and stop execution
+```
+
+#### `print_functions(object $obj): void`
+Display all methods of an object.
+
+```php
+Str::print_functions($myObject); // Shows all available methods
+```
