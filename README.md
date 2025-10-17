@@ -337,6 +337,230 @@ $randomColor = Arrays::random($colors); // e.g., 'green'
 $randomColors = Arrays::random($colors, 2); // e.g., ['red', 'blue']
 ```
 
+#### `keyBy(array $array, string|callable $key): array`
+Key array by specific field value (supports dot notation).
+
+```php
+$users = [
+    ['id' => 1, 'name' => 'John', 'profile' => ['username' => 'john123']],
+    ['id' => 2, 'name' => 'Jane', 'profile' => ['username' => 'jane456']]
+];
+
+$byId = Arrays::keyBy($users, 'id');
+// Result: [1 => ['id' => 1, 'name' => 'John', ...], 2 => ['id' => 2, 'name' => 'Jane', ...]]
+
+$byUsername = Arrays::keyBy($users, 'profile.username');
+// Result: ['john123' => ['id' => 1, ...], 'jane456' => ['id' => 2, ...]]
+
+// Using callback
+$byFirstLetter = Arrays::keyBy($users, fn($user) => strtoupper($user['name'][0]));
+// Result: ['J' => ['id' => 2, 'name' => 'Jane', ...]] (last John/Jane wins)
+```
+
+#### `last(array $array, ?callable $callback = null, mixed $default = null): mixed`
+Get last element matching criteria.
+
+```php
+$numbers = [1, 2, 3, 4, 5];
+$last = Arrays::last($numbers); // 5
+
+$lastEven = Arrays::last($numbers, fn($n) => $n % 2 === 0); // 4
+$lastLarge = Arrays::last($numbers, fn($n) => $n > 10, 'none'); // 'none'
+```
+
+#### `where(array $array, callable $callback): array`
+Filter array using callback.
+
+```php
+$users = [
+    ['name' => 'John', 'age' => 30, 'active' => true],
+    ['name' => 'Jane', 'age' => 25, 'active' => false],
+    ['name' => 'Bob', 'age' => 35, 'active' => true]
+];
+
+$adults = Arrays::where($users, fn($user) => $user['age'] >= 30);
+// Result: [['name' => 'John', ...], ['name' => 'Bob', ...]]
+```
+
+#### `whereEquals(array $array, string $key, mixed $value): array`
+Filter array where value equals.
+
+```php
+$users = [
+    ['name' => 'John', 'status' => 'active'],
+    ['name' => 'Jane', 'status' => 'inactive'],
+    ['name' => 'Bob', 'status' => 'active']
+];
+
+$activeUsers = Arrays::whereEquals($users, 'status', 'active');
+// Result: [['name' => 'John', ...], ['name' => 'Bob', ...]]
+```
+
+#### `whereIn(array $array, string $key, array $values): array`
+Filter array where value is in array.
+
+```php
+$users = [
+    ['name' => 'John', 'role' => 'admin'],
+    ['name' => 'Jane', 'role' => 'user'],
+    ['name' => 'Bob', 'role' => 'moderator']
+];
+
+$privilegedUsers = Arrays::whereIn($users, 'role', ['admin', 'moderator']);
+// Result: [['name' => 'John', ...], ['name' => 'Bob', ...]]
+```
+
+#### `whereNotIn(array $array, string $key, array $values): array`
+Filter array where value is not in array.
+
+```php
+$users = [
+    ['name' => 'John', 'role' => 'admin'],
+    ['name' => 'Jane', 'role' => 'user'],
+    ['name' => 'Bob', 'role' => 'banned']
+];
+
+$allowedUsers = Arrays::whereNotIn($users, 'role', ['banned', 'suspended']);
+// Result: [['name' => 'John', ...], ['name' => 'Jane', ...]]
+```
+
+#### `isAssoc(array $array): bool`
+Check if array is associative.
+
+```php
+$indexed = [1, 2, 3];
+$assoc = ['name' => 'John', 'age' => 30];
+
+echo Arrays::isAssoc($indexed); // false
+echo Arrays::isAssoc($assoc); // true
+```
+
+#### `isSequential(array $array): bool`
+Check if array is sequential (list).
+
+```php
+$sequential = [1, 2, 3];
+$assoc = ['name' => 'John', 'age' => 30];
+
+echo Arrays::isSequential($sequential); // true
+echo Arrays::isSequential($assoc); // false
+```
+
+#### `shuffle(array $array): array`
+Shuffle array preserving keys.
+
+```php
+$data = ['a' => 1, 'b' => 2, 'c' => 3];
+$shuffled = Arrays::shuffle($data);
+// Result: Keys preserved but order randomized, e.g., ['c' => 3, 'a' => 1, 'b' => 2]
+```
+
+#### `collapse(array $array): array`
+Collapse array of arrays into single array.
+
+```php
+$nested = [[1, 2], [3, 4], [5]];
+$collapsed = Arrays::collapse($nested);
+// Result: [1, 2, 3, 4, 5]
+```
+
+#### `crossJoin(array ...$arrays): array`
+Cross join arrays.
+
+```php
+$colors = ['red', 'blue'];
+$sizes = ['S', 'M'];
+
+$combinations = Arrays::crossJoin($colors, $sizes);
+// Result: [['red', 'S'], ['red', 'M'], ['blue', 'S'], ['blue', 'M']]
+```
+
+#### `divide(array $array): array`
+Divide array into keys and values.
+
+```php
+$data = ['name' => 'John', 'age' => 30];
+[$keys, $values] = Arrays::divide($data);
+// $keys = ['name', 'age']
+// $values = ['John', 30]
+```
+
+#### `replaceRecursive(array $array, array ...$replacements): array`
+Recursively replace values in array.
+
+```php
+$config = [
+    'database' => ['host' => 'localhost', 'port' => 3306],
+    'cache' => ['driver' => 'file']
+];
+
+$override = [
+    'database' => ['host' => 'production.db.com'],
+    'cache' => ['driver' => 'redis', 'ttl' => 3600]
+];
+
+$merged = Arrays::replaceRecursive($config, $override);
+// Result: Nested arrays merged recursively
+```
+
+#### `duplicates(array $array): array`
+Get duplicate values from array.
+
+```php
+$items = ['apple', 'banana', 'apple', 'orange', 'banana', 'apple'];
+$dupes = Arrays::duplicates($items);
+// Result: ['apple' => 3, 'banana' => 2]
+```
+
+#### `map(array $array, callable $callback): array`
+Map array preserving keys.
+
+```php
+$prices = ['apple' => 1.50, 'banana' => 0.75, 'orange' => 2.00];
+$withTax = Arrays::map($prices, fn($price, $key) => $price * 1.1);
+// Result: ['apple' => 1.65, 'banana' => 0.825, 'orange' => 2.2]
+```
+
+#### `mapRecursive(array $array, callable $callback): array`
+Recursively map array.
+
+```php
+$data = [
+    'user' => ['name' => 'john', 'email' => 'JOHN@EXAMPLE.COM'],
+    'meta' => ['tags' => ['PHP', 'javascript']]
+];
+
+$normalized = Arrays::mapRecursive($data, fn($value) => is_string($value) ? strtolower($value) : $value);
+// Result: All string values converted to lowercase recursively
+```
+
+#### `wrap(mixed $value): array`
+Wrap value in array if not already an array.
+
+```php
+$single = Arrays::wrap('hello'); // ['hello']
+$multiple = Arrays::wrap(['a', 'b']); // ['a', 'b']
+$null = Arrays::wrap(null); // []
+```
+
+#### `toQuery(string $array): string`
+Convert array to query string.
+
+```php
+$params = ['name' => 'John Doe', 'age' => 30, 'tags' => ['php', 'web']];
+$query = Arrays::toQuery($params);
+// Result: "name=John%20Doe&age=30&tags%5B0%5D=php&tags%5B1%5D=web"
+```
+
+#### `fromQuery(string $query): array`
+Parse query string to array.
+
+```php
+$query = 'name=John%20Doe&age=30&active=1';
+$params = Arrays::fromQuery($query);
+// Result: ['name' => 'John Doe', 'age' => '30', 'active' => '1']
+```
+
 #### `chunk(array $array, int $size, bool $preserveKeys = false): array`
 Split array into chunks.
 
