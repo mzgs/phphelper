@@ -66,7 +66,7 @@ Config::createConfigTable();
 Config::set('site_name', 'PHP Helper');
 
 
-echo Countries::nameWithFlag('tr');
+// echo Countries::nameWithFlag('tr');
 
 
 $twigCard = null;
@@ -92,12 +92,9 @@ $router->before('GET|POST|PUT|DELETE', '/admin(/.*)?', fn() => AuthManager::requ
 $router->set404(fn() => throw new \Exception("The requested page could not be found 404: " .
     ($_SERVER['REQUEST_URI'] ?? 'unknown'), 404));
 
-// include 'routes.php';
+include 'routes.php';
 
-$router->get('/', function() {
-    echo "test";    
-});
-
+ 
 $router->run();
 
 ?>

@@ -501,8 +501,7 @@ class PrettyErrorHandler
 
         $trace = $e->getTrace();
         if ($trace) {
-            for ($i = count($trace) - 1; $i >= 0; $i--) {
-                $frame = $trace[$i];
+            foreach ($trace as $frame) {
                 if (!isset($frame['file'], $frame['line'])) {
                     continue;
                 }
