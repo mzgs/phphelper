@@ -74,6 +74,38 @@ final class AuthManagerTest extends TestCase
         $this->assertArrayNotHasKey('phphelper_remember', $_COOKIE);
     }
 
+    public function testLogoutClearsSessionAndCurrentUser(): void
+    {
+        $this->initManager();
+
+        AuthManager::register('logout@example.com', 'secret123');
+        $this->assertTrue(AuthManager::isLoggedIn());
+
+        AuthManager::logout();
+
+        $this->assertFalse(AuthManager::isLoggedIn());
+        $this->assertNull(AuthManager::user());
+        $this->assertArrayNotHasKey('auth_user_for_tests', $_SESSION);
+    }
+
+    public function testLogoutClearsRememberCookie(): void
+    {
+        $this->initManager([
+            'remember_cookie' => 'logout_remember_cookie',
+            'remember_secret' => 'logout-secret',
+        ]);
+
+        AuthManager::register('rememberlogout@example.com', 'secret123');
+        AuthManager::login('rememberlogout@example.com', 'secret123', true);
+
+        $this->assertArrayHasKey('logout_remember_cookie', $_COOKIE);
+
+        AuthManager::logout();
+
+        $this->assertArrayNotHasKey('logout_remember_cookie', $_COOKIE);
+        $this->assertFalse(AuthManager::isLoggedIn());
+    }
+
     public function testRememberCookieRestoresAcrossInit(): void
     {
         $config = [

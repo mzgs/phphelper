@@ -286,6 +286,17 @@ class AuthManager
     }
 
     /**
+     * Log out the current user and clear all persisted authentication state.
+     */
+    public static function logout(): void
+    {
+        self::ensureInitialized();
+
+        self::persistUser(null, null, false);
+        self::regenerateSessionId();
+    }
+
+    /**
      * Ensure a user is authenticated and return their sanitized record.
      *
      * The optional handler is invoked when unauthenticated (for example to
