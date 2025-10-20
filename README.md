@@ -601,6 +601,10 @@ AuthManager::init([
 ]);
 ```
 
+### Password Hashing
+
+AuthManager hashes credentials with PHP's `password_hash()` using `PASSWORD_BCRYPT`. Existing hashes are transparently refreshed on login via `password_needs_rehash()` when configuration changes.
+
 ### Methods
 
 #### `init(array $config = []): void`

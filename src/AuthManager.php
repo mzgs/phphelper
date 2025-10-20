@@ -211,7 +211,7 @@ class AuthManager
             return null;
         }
 
-        if (password_needs_rehash($hash, PASSWORD_DEFAULT)) {
+        if (password_needs_rehash($hash, PASSWORD_BCRYPT)) {
             self::updatePasswordHash($user[self::$primaryKey] ?? null, $password);
             $user = self::getUserByColumn(self::$emailColumn, $email) ?? $user;
         }
@@ -248,7 +248,7 @@ class AuthManager
 
         $data = $attributes;
         $data[self::$emailColumn] = $email;
-        $data[self::$passwordColumn] = password_hash($password, PASSWORD_DEFAULT);
+        $data[self::$passwordColumn] = password_hash($password, PASSWORD_BCRYPT);
 
         $columns = array_keys($data);
         foreach ($columns as $column) {
@@ -626,7 +626,7 @@ class AuthManager
             return;
         }
 
-        $hash = password_hash($password, PASSWORD_DEFAULT);
+        $hash = password_hash($password, PASSWORD_BCRYPT);
         DB::update(self::$table, [self::$passwordColumn => $hash], self::$primaryKey . ' = :id', ['id' => $id]);
     }
 
