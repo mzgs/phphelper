@@ -245,7 +245,7 @@ class DB
             }
         };
 
-        $title = '\n=== Database Backup/Restore (' . $database . ') ===\n';
+        $title = PHP_EOL . '=== Database Backup/Restore (' . $database . ') ===' . PHP_EOL;
 
         $entries = [];
         $modes = $mode !== null && $mode !== '' ? [$mode] : ['backup', 'restore'];
