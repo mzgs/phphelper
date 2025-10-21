@@ -193,7 +193,7 @@ class App
 
                     $write(PHP_EOL . 'Exit code: ' . $exitCode . PHP_EOL);
 
-                    return;
+                    exit($exitCode);
                 }
 
                 if ($callable === null) {
@@ -216,7 +216,7 @@ class App
 
                 $write(PHP_EOL . 'Exit code: ' . $exitCode . PHP_EOL);
 
-                return;
+                exit($exitCode);
             }
         } finally {
             if ($closeStdin && is_resource($stdin)) {
@@ -227,6 +227,8 @@ class App
                 fclose($stdout);
             }
         }
+
+        exit(0);
     }
 
 }
