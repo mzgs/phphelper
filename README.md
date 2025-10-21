@@ -168,6 +168,26 @@ if (App::isProduction()) {
 }
 ```
 
+#### `cliMenu(array $options): void`
+Render an interactive CLI menu where each option executes a shell command.
+
+```php
+use PhpHelper\App;
+
+App::cliMenu([
+    'List files' => 'ls -al',
+    'Run tests' => [
+        'label' => 'Execute PHPUnit suite',
+        'command' => 'vendor/bin/phpunit',
+    ],
+    'Migrate database' => './artisan migrate',
+]);
+```
+
+- Only runs when invoked from the CLI; it exits early in web contexts.
+- Accepts either `label => command` pairs or configuration arrays with a `command` key and optional `label`/`title`.
+- Displays the resulting exit code after each command, and supports quitting via `q`, `quit`, or `exit`.
+
 ---
 
 ## Arrays
