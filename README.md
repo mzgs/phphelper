@@ -186,6 +186,7 @@ App::cliMenu([
 
 - Only runs when invoked from the CLI; it exits early in web contexts.
 - Accepts either `label => command` pairs or configuration arrays with a `command` key and optional `label`/`title`.
+- Supports PHP callables via `run`/`callback`/`callable` entries for in-process actions.
 - Displays the resulting exit code after each command, and supports quitting via `q`, `quit`, or `exit`.
 
 ---
@@ -1065,6 +1066,30 @@ $result = DB::transaction(function() {
     return $userId;
 });
 ```
+
+#### `cliBackupRestoreOptions(string $dbname, string $dbUser, string $dbPassword, array $options = []): array`
+Generate menu-ready callbacks for backing up or restoring a MySQL database from the CLI.
+
+```php
+use PhpHelper\{App, DB};
+
+if (App::isCli()) {
+    $menu = DB::cliBackupRestoreOptions('phphelper', 'root', 'secret', [
+        'defaults' => [
+            'file' => 'storage/backups/local.sql',
+        ],
+        'backup_options' => [
+            'mysqldump_path' => '/usr/local/mysql/bin/mysqldump',
+        ],
+    ]);
+
+    App::cliMenu($menu);
+}
+```
+
+- Returns an array compatible with `App::cliMenu`, combining either or both "Backup" and "Restore" actions.
+- Respects `defaults`, `backup_options`, `restore_options`, and optional `mode` (`backup` or `restore`) to limit which entries are generated.
+- Each callback prints progress messages and delegates to `DB::backup()` / `DB::restore()` internally.
 
 ---
 
@@ -2747,7 +2772,9 @@ if (App::isProduction()) {
 } 
 // ---- LOCAL ----
 else {
-    DB::cliBackupRestore('phphelper', 'root', '1');
+    if (App::isCli()) {
+        App::cliMenu(DB::cliBackupRestoreOptions('phphelper', 'root', '1'));
+    }
     PrettyErrorHandler::init(['display' => true, 'log_errors' => false]);
     DB::mysql('phphelper', 'root', '1');
 }   

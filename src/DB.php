@@ -98,7 +98,7 @@ class DB
     }
 
     /**
-     * CLI helper for MySQL backups or restores using existing helpers. Prompts only for mode.
+     * Build CLI menu definitions for MySQL backups or restores using existing helpers.
      *
      * @param array{
      *     defaults?: array{
@@ -115,11 +115,13 @@ class DB
      *     restore_options?: array<string, mixed>,
      *     mode?: string
      * } $options
+     *
+     * @return array<int, array{label: string, run: callable}>
      */
-    public static function cliBackupRestore(string $dbname, string $dbUser, string $dbPassword, array $options = []): void
+    public static function cliBackupRestoreOptions(string $dbname, string $dbUser, string $dbPassword, array $options = []): array
     {
         if (!App::isCli()) {
-            return;
+            return [];
         }
 
         if (isset($options['defaults']) && !is_array($options['defaults'])) {
@@ -188,106 +190,95 @@ class DB
             $cliOptions['unix_socket'] = $socket;
         }
 
-        $stdout = defined('STDOUT') ? STDOUT : fopen('php://stdout', 'w');
-        if (!is_resource($stdout)) {
-            throw new RuntimeException('Unable to access CLI output.');
-        }
-
-        $write = static function (string $message) use ($stdout): void {
-            fwrite($stdout, $message);
-        };
-
         $modeValue = $options['mode'] ?? null;
         $mode = null;
         if (is_string($modeValue)) {
             $mode = strtolower(trim($modeValue));
         }
+        if ($mode !== null && $mode !== '' && !in_array($mode, ['backup', 'restore'], true)) {
+            throw new \InvalidArgumentException('Mode must be either "backup" or "restore" when provided.');
+        }
 
-        $write("\n=== Database Backup/Restore (" . $database . ") ===\n");
+        if (isset($options['backup_options']) && !is_array($options['backup_options'])) {
+            throw new \InvalidArgumentException('The \"backup_options\" configuration must be an array when provided.');
+        }
+        if (isset($options['restore_options']) && !is_array($options['restore_options'])) {
+            throw new \InvalidArgumentException('The \"restore_options\" configuration must be an array when provided.');
+        }
 
-        if ($mode === null || $mode === '') {
-            $stdin = defined('STDIN') ? STDIN : fopen('php://stdin', 'r');
-            if (!is_resource($stdin)) {
-                throw new RuntimeException('Unable to access CLI input.');
+        $backupOptions = $options['backup_options'] ?? [];
+        $restoreOptions = $options['restore_options'] ?? [];
+
+        $backupCliOptions = array_merge($cliOptions, $backupOptions);
+        $mysqldumpPath = $stringDefault($backupOptions, 'mysqldump_path');
+        if ($mysqldumpPath !== null && $mysqldumpPath !== '') {
+            $backupCliOptions['mysqldump_path'] = $mysqldumpPath;
+        }
+
+        $restoreCliOptions = array_merge($cliOptions, $restoreOptions);
+        $mysqlPath = $stringDefault($restoreOptions, 'mysql_path');
+        if ($mysqlPath !== null && $mysqlPath !== '') {
+            $restoreCliOptions['mysql_path'] = $mysqlPath;
+        }
+
+        $charsetDefault = $stringDefault($defaults, 'charset');
+        if ($charsetDefault === null) {
+            $charsetDefault = $stringDefault($restoreOptions, 'charset', 'utf8');
+        }
+        if ($charsetDefault !== null && $charsetDefault !== '') {
+            $restoreCliOptions['charset'] = $charsetDefault;
+        }
+
+        $write = static function (string $message): void {
+            $stdout = defined('STDOUT') && is_resource(STDOUT) ? STDOUT : fopen('php://stdout', 'w');
+            if (!is_resource($stdout)) {
+                throw new RuntimeException('Unable to access CLI output.');
             }
 
-            $write("1) Backup database to SQL file\n");
-            $write("2) Restore database from SQL file\n");
-
-            $prompt = static function (string $question, string $default) use ($stdin, $write): string {
-                while (true) {
-                    $suffix = $default !== '' ? ' [' . $default . ']' : '';
-                    $write($question . $suffix . ': ');
-                    $line = fgets($stdin);
-                    if ($line === false) {
-                        throw new RuntimeException('Failed to read user input.');
-                    }
-                    $value = trim($line);
-                    if ($value === '') {
-                        $value = $default;
-                    }
-                    if ($value !== '') {
-                        return strtolower($value);
-                    }
-                    $write("Please enter a value.\n");
+            $shouldClose = !defined('STDOUT') || $stdout !== STDOUT;
+            try {
+                fwrite($stdout, $message);
+            } finally {
+                if ($shouldClose) {
+                    fclose($stdout);
                 }
-            };
+            }
+        };
 
-            $choice = $prompt('Choose mode (1 or 2)', '1');
-            if ($choice === '2' || $choice === 'restore') {
-                $mode = 'restore';
-            } elseif ($choice === '1' || $choice === 'backup') {
-                $mode = 'backup';
-            } else {
-                $mode = 'backup';
-                $write("Unknown choice, defaulting to backup.\n");
+        $title = '\n=== Database Backup/Restore (' . $database . ') ===\n';
+
+        $entries = [];
+        $modes = $mode !== null && $mode !== '' ? [$mode] : ['backup', 'restore'];
+
+        foreach ($modes as $modeEntry) {
+            if ($modeEntry === 'backup') {
+                $entries[] = [
+                    'label' => 'Backup database to SQL file',
+                    'run' => function () use ($write, $title, $database, $user, $password, $filePath, $backupCliOptions): int {
+                        $write($title);
+                        $write('Mode: Backup' . PHP_EOL);
+                        self::backup($database, $user, $password, $filePath, $backupCliOptions);
+                        $write('Backup completed successfully to ' . $filePath . PHP_EOL);
+
+                        return 0;
+                    },
+                ];
+            } elseif ($modeEntry === 'restore') {
+                $entries[] = [
+                    'label' => 'Restore database from SQL file',
+                    'run' => function () use ($write, $title, $database, $user, $password, $filePath, $restoreCliOptions): int {
+                        $write($title);
+                        $write('Mode: Restore' . PHP_EOL);
+                        self::restore($database, $user, $password, $filePath, $restoreCliOptions);
+                        $write('Restore completed successfully from ' . $filePath . PHP_EOL);
+
+                        return 0;
+                    },
+                ];
             }
         }
 
-        if (!in_array($mode, ['backup', 'restore'], true)) {
-            throw new \InvalidArgumentException('Mode must be either "backup" or "restore".');
-        }
-
-        $write('Mode: ' . ucfirst($mode) . "\n");
-
-        if ($mode === 'backup') {
-            if (isset($options['backup_options']) && !is_array($options['backup_options'])) {
-                throw new \InvalidArgumentException('The \"backup_options\" configuration must be an array when provided.');
-            }
-            $backupOptions = $options['backup_options'] ?? [];
-            $cliOptions = array_merge($backupOptions, $cliOptions);
-
-            $mysqldumpPath = $stringDefault($backupOptions, 'mysqldump_path');
-            if ($mysqldumpPath !== null && $mysqldumpPath !== '') {
-                $cliOptions['mysqldump_path'] = $mysqldumpPath;
-            }
-
-            self::backup($database, $user, $password, $filePath, $cliOptions);
-            $write("Backup completed successfully to " . $filePath . "\n");
-        } else {
-            if (isset($options['restore_options']) && !is_array($options['restore_options'])) {
-                throw new \InvalidArgumentException('The \"restore_options\" configuration must be an array when provided.');
-            }
-            $restoreOptions = $options['restore_options'] ?? [];
-            $cliOptions = array_merge($restoreOptions, $cliOptions);
-
-            $mysqlPath = $stringDefault($restoreOptions, 'mysql_path');
-            if ($mysqlPath !== null && $mysqlPath !== '') {
-                $cliOptions['mysql_path'] = $mysqlPath;
-            }
-
-            $charsetDefault = $stringDefault($defaults, 'charset');
-            if ($charsetDefault === null) {
-                $charsetDefault = $stringDefault($restoreOptions, 'charset', 'utf8');
-            }
-            if ($charsetDefault !== null && $charsetDefault !== '') {
-                $cliOptions['charset'] = $charsetDefault;
-            }
-
-            self::restore($database, $user, $password, $filePath, $cliOptions);
-            $write("Restore completed successfully from " . $filePath . "\n");
-        }
-        exit;
+        return $entries;
     }
 
     /**

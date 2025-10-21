@@ -57,6 +57,7 @@ class App
 
         foreach ($options as $label => $commandSpec) {
             $command = null;
+            $callable = null;
             $displayLabel = null;
 
             if (is_array($commandSpec)) {
@@ -69,12 +70,19 @@ class App
                 if (is_string($labelValue)) {
                     $displayLabel = trim($labelValue);
                 }
+
+                $callableValue = $commandSpec['run'] ?? $commandSpec['callback'] ?? $commandSpec['callable'] ?? null;
+                if (is_callable($callableValue)) {
+                    $callable = $callableValue;
+                }
             } elseif (is_string($commandSpec)) {
                 $command = trim($commandSpec);
+            } elseif (is_callable($commandSpec)) {
+                $callable = $commandSpec;
             }
 
-            if ($command === null || $command === '') {
-                throw new \InvalidArgumentException('Each CLI menu option must define a non-empty command.');
+            if (($command === null || $command === '') && $callable === null) {
+                throw new \InvalidArgumentException('Each CLI menu option must define a non-empty command or callable.');
             }
 
             if ($displayLabel === null || $displayLabel === '') {
@@ -83,13 +91,14 @@ class App
                 }
 
                 if ($displayLabel === null || $displayLabel === '') {
-                    $displayLabel = $command;
+                    $displayLabel = $command !== null && $command !== '' ? $command : 'Option ' . $index;
                 }
             }
 
             $menu[$index] = [
                 'label' => $displayLabel,
                 'command' => $command,
+                'callable' => $callable,
             ];
 
             ++$index;
@@ -174,16 +183,42 @@ class App
                     continue;
                 }
 
-                $command = $menu[$selected]['command'];
-                $write(PHP_EOL . '$ ' . $command . PHP_EOL);
+                $entry = $menu[$selected];
+                $command = $entry['command'];
+                $callable = $entry['callable'];
 
-                $bashCommand = 'bash -lc ' . escapeshellarg($command);
+                if ($command !== null && $command !== '') {
+                    $write(PHP_EOL . '$ ' . $command . PHP_EOL);
+
+                    $bashCommand = 'bash -lc ' . escapeshellarg($command);
+                    $exitCode = 0;
+
+                    if (function_exists('passthru')) {
+                        passthru($bashCommand, $exitCode);
+                    } else {
+                        system($bashCommand, $exitCode);
+                    }
+
+                    $write(PHP_EOL . 'Exit code: ' . $exitCode . PHP_EOL);
+                    continue;
+                }
+
+                if ($callable === null) {
+                    $write('Invalid configuration for selected option.' . PHP_EOL);
+
+                    continue;
+                }
+
                 $exitCode = 0;
-
-                if (function_exists('passthru')) {
-                    passthru($bashCommand, $exitCode);
-                } else {
-                    system($bashCommand, $exitCode);
+                try {
+                    $result = $callable();
+                    if (is_int($result)) {
+                        $exitCode = $result;
+                    }
+                } catch (\Throwable $throwable) {
+                    $write('Error: ' . $throwable->getMessage() . PHP_EOL);
+                    $code = (int) $throwable->getCode();
+                    $exitCode = $code !== 0 ? $code : 1;
                 }
 
                 $write(PHP_EOL . 'Exit code: ' . $exitCode . PHP_EOL);

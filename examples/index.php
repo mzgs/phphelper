@@ -25,12 +25,16 @@ if (App::isProduction()) {
 } 
 // ---- LOCAL ----
 else {
-    
-    DB::cliBackupRestore('phphelper1', 'root', '1');
+    if (App::isCli()) {
+        $options = DB::cliBackupRestoreOptions('phphelper1', 'root', '1');
+        if ($options !== []) {
+            App::cliMenu($options);
+        }
+    }
     DB::mysql('phphelper1', 'root', '1');
     PrettyErrorHandler::init(['display' => true, 'log_errors' => false]);
 
-}   
+}  
 
 // DB::getRow('SELECT * FROM users');
 
