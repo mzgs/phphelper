@@ -140,29 +140,54 @@ class App
             fwrite($stdout, $message);
         };
 
+        $autoChoice = null;
+        if (isset($GLOBALS['argv']) && is_array($GLOBALS['argv']) && count($GLOBALS['argv']) > 1) {
+            foreach (array_slice($GLOBALS['argv'], 1) as $argument) {
+                $candidate = trim((string) $argument);
+                if ($candidate !== '') {
+                    $autoChoice = $candidate;
+                    break;
+                }
+            }
+        }
+
         try {
             while (true) {
-                $write(PHP_EOL . '=== Command Menu ===' . PHP_EOL);
+                $fromAuto = false;
 
-                foreach ($menu as $number => $item) {
-                    $write($number . ') ' . $item['label'] . PHP_EOL);
-                }
+                if ($autoChoice !== null) {
+                    $choice = $autoChoice;
+                    $autoChoice = null;
+                    $fromAuto = true;
+                } else {
+                    $write(PHP_EOL . '=== Command Menu ===' . PHP_EOL);
 
-                $write('Choose an option: ');
+                    foreach ($menu as $number => $item) {
+                        $write($number . ') ' . $item['label'] . PHP_EOL);
+                    }
 
-                $input = fgets($stdin);
-                if ($input === false) {
-                    $write(PHP_EOL . 'No input detected. Exiting.' . PHP_EOL);
+                    $write('Choose an option: ');
 
-                    return;
-                }
+                    $input = fgets($stdin);
+                    if ($input === false) {
+                        $write(PHP_EOL . 'No input detected. Exiting.' . PHP_EOL);
 
-                $choice = trim($input);
-                if ($choice === '') {
-                    continue;
+                        return;
+                    }
+
+                    $choice = trim($input);
+                    if ($choice === '') {
+                        continue;
+                    }
                 }
 
                 if (!ctype_digit($choice)) {
+                    if ($fromAuto) {
+                        $write('Invalid selection provided via CLI arguments.' . PHP_EOL);
+
+                        exit(1);
+                    }
+
                     $write('Invalid selection. Enter the option number and press Enter.' . PHP_EOL);
 
                     continue;
@@ -170,6 +195,12 @@ class App
 
                 $selected = (int) $choice;
                 if (!isset($menu[$selected])) {
+                    if ($fromAuto) {
+                        $write('Unknown option provided via CLI arguments.' . PHP_EOL);
+
+                        exit(1);
+                    }
+
                     $write('Unknown option. Please choose a valid number.' . PHP_EOL);
 
                     continue;
