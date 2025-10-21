@@ -148,7 +148,6 @@ class App
                     $write($number . ') ' . $item['label'] . PHP_EOL);
                 }
 
-                $write('q) Quit' . PHP_EOL);
                 $write('Choose an option: ');
 
                 $input = fgets($stdin);
@@ -161,13 +160,6 @@ class App
                 $choice = trim($input);
                 if ($choice === '') {
                     continue;
-                }
-
-                $choiceLower = strtolower($choice);
-                if (in_array($choiceLower, ['q', 'quit', 'exit'], true)) {
-                    $write('Goodbye!' . PHP_EOL);
-
-                    return;
                 }
 
                 if (!ctype_digit($choice)) {
@@ -200,7 +192,8 @@ class App
                     }
 
                     $write(PHP_EOL . 'Exit code: ' . $exitCode . PHP_EOL);
-                    continue;
+
+                    return;
                 }
 
                 if ($callable === null) {
@@ -222,6 +215,8 @@ class App
                 }
 
                 $write(PHP_EOL . 'Exit code: ' . $exitCode . PHP_EOL);
+
+                return;
             }
         } finally {
             if ($closeStdin && is_resource($stdin)) {
