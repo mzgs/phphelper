@@ -585,6 +585,14 @@ class DB
         return $row === false ? null : $row;
     }
 
+    public static function getById(string $table, string $id): ?array
+    {
+         return DB::getRow(
+             'SELECT * FROM ' . DB::quoteIdentifier($table) . ' WHERE id = :id LIMIT 1',
+             ['id' => $id]
+         );
+    }
+
     /**
      * Fetch all rows (associative arrays).
      *
