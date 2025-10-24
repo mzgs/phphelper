@@ -7,6 +7,9 @@ class PrettyErrorHandler
     /** @var array<string,mixed> */
     private array $options;
 
+    /** @var int */
+    private static int $overlayCounter = 0;
+
     /**
      * Create and (by default) register global handlers.
      *
@@ -298,6 +301,13 @@ class PrettyErrorHandler
      */
     private function renderHtmlOverlay(\Throwable $e, string $type, string $message, string $file, int $line, ?array $snippet, string $traceHtml, string $traceText, ?string $traceSummary, string $rawMessage): void
     {
+        $instance = ++self::$overlayCounter;
+        $overlayId = 'php-error-overlay-' . $instance;
+        $titleId = 'php-error-title-' . $instance;
+        $copyButtonId = 'php-error-copy-' . $instance;
+        $closeButtonId = 'php-error-close-' . $instance;
+        $styleId = 'php-error-overlay-style-' . $instance;
+
         $fileHtml = htmlspecialchars($file, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $lineHtml = (string)(int)$line;
         $copyTextParts = [
@@ -314,7 +324,7 @@ class PrettyErrorHandler
         }
 
         // Styles scoped with `eh-` prefix to avoid collisions; very high z-index.
-        echo '<style id="php-error-overlay-style">'
+        echo '<style id="' . $styleId . '">'
             . '.eh-overlay{position:fixed;inset:0;display:flex;align-items:flex-start;justify-content:center;padding:32px;z-index:2147483647;background:rgba(10,15,20,.6);backdrop-filter:blur(2px);} '
             . '.eh-modal{width:min(1000px,92vw);margin-top:24px;background:#161b22;border:1px solid #30363d;border-radius:8px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.4);color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Ubuntu,Cantarell,\"Helvetica Neue\",Arial,\"Apple Color Emoji\",\"Segoe UI Emoji\";} '
             . '.eh-bar{background:#da3633;color:#fff;padding:12px 16px;font-size:16px;font-weight:600;display:flex;align-items:center;gap:12px;} '
@@ -341,13 +351,13 @@ class PrettyErrorHandler
             . '.eh-small{opacity:.85;font-size:12px;} '
             . '</style>';
 
-        echo '<div class="eh-overlay" id="php-error-overlay" role="dialog" aria-modal="true" aria-labelledby="php-error-title">'
+        echo '<div class="eh-overlay" id="' . $overlayId . '" role="dialog" aria-modal="true" aria-labelledby="' . $titleId . '">'
             . '<div class="eh-modal">'
             . '<div class="eh-bar">'
-            . '<div class="eh-title" id="php-error-title">' . htmlspecialchars($type, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . ': ' . $message . '</div>'
+            . '<div class="eh-title" id="' . $titleId . '">' . htmlspecialchars($type, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . ': ' . $message . '</div>'
             . '<div class="eh-actions">'
-            . '<button type="button" class="eh-button eh-copy" id="php-error-copy" aria-label="Copy error"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 18H8V7h11v16z"/></svg>Copy error</button>'
-            . '<button type="button" class="eh-button eh-close" id="php-error-close" aria-label="Close">&times;</button>'
+            . '<button type="button" class="eh-button eh-copy" id="' . $copyButtonId . '" aria-label="Copy error"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 18H8V7h11v16z"/></svg>Copy error</button>'
+            . '<button type="button" class="eh-button eh-close" id="' . $closeButtonId . '" aria-label="Close">&times;</button>'
             . '</div>'
             . '</div>'
             . '<div class="eh-meta">File: ' . $fileHtml . ' &nbsp;•&nbsp; Line: ' . $lineHtml . '</div>'
@@ -366,7 +376,7 @@ class PrettyErrorHandler
             echo '<div class="eh-meta eh-small">Source not available</div>';
         }
 
-        $script = '<script>(function(){try{var ov=document.getElementById("php-error-overlay");if(!ov)return;var closeBtn=document.getElementById("php-error-close");var modal=document.querySelector("#php-error-overlay .eh-modal");var copyBtn=document.getElementById("php-error-copy");var originalCopyLabel=copyBtn?copyBtn.textContent:"";var copyText=' . json_encode($copyText) . ';function close(){if(ov&&ov.parentNode){ov.parentNode.removeChild(ov);}document.removeEventListener("keydown",onKey);if(ov){ov.removeEventListener("click",onOverlayClick);}}function onKey(e){if(e.key==="Escape"){close();}}function onOverlayClick(e){if(!modal||modal.contains(e.target)){return;}close();}if(closeBtn){closeBtn.addEventListener("click",close);}document.addEventListener("keydown",onKey);if(ov){ov.addEventListener("click",onOverlayClick);}if(copyBtn){copyBtn.addEventListener("click",function(){var reset=function(){copyBtn.textContent=originalCopyLabel;};var markCopied=function(){copyBtn.textContent="Copied!";setTimeout(reset,1500);};var fallback=function(){var textarea=document.createElement("textarea");textarea.value=copyText;textarea.setAttribute("readonly","true");textarea.style.position="fixed";textarea.style.opacity="0";document.body.appendChild(textarea);if(typeof textarea.focus==="function"){textarea.focus();}textarea.select();if(typeof textarea.setSelectionRange==="function"){textarea.setSelectionRange(0,textarea.value.length);}var copied=false;try{if(typeof document.execCommand==="function"){copied=document.execCommand("copy");}}catch(err){console.error(err);}document.body.removeChild(textarea);if(copied){markCopied();}else{reset();}};if(window.navigator&&navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(copyText).then(function(){markCopied();},function(){fallback();});}else{fallback();}});} }catch(e){/* noop */}})();</script>';
+        $script = '<script>(function(){try{var ov=document.getElementById("' . $overlayId . '");if(!ov)return;var closeBtn=document.getElementById("' . $closeButtonId . '");var modal=ov.querySelector(".eh-modal");var copyBtn=document.getElementById("' . $copyButtonId . '");var originalCopyLabel=copyBtn?copyBtn.textContent:"";var copyText=' . json_encode($copyText) . ';function close(){if(ov&&ov.parentNode){ov.parentNode.removeChild(ov);}document.removeEventListener("keydown",onKey);if(ov){ov.removeEventListener("click",onOverlayClick);}}function onKey(e){if(e.key==="Escape"){close();}}function onOverlayClick(e){if(!modal||modal.contains(e.target)){return;}close();}if(closeBtn){closeBtn.addEventListener("click",close);}document.addEventListener("keydown",onKey);ov.addEventListener("click",onOverlayClick);if(copyBtn){copyBtn.addEventListener("click",function(){var reset=function(){copyBtn.textContent=originalCopyLabel;};var markCopied=function(){copyBtn.textContent="Copied!";setTimeout(reset,1500);};var fallback=function(){var textarea=document.createElement("textarea");textarea.value=copyText;textarea.setAttribute("readonly","true");textarea.style.position="fixed";textarea.style.opacity="0";document.body.appendChild(textarea);if(typeof textarea.focus==="function"){textarea.focus();}textarea.select();if(typeof textarea.setSelectionRange==="function"){textarea.setSelectionRange(0,textarea.value.length);}var copied=false;try{if(typeof document.execCommand==="function"){copied=document.execCommand("copy");}}catch(err){console.error(err);}document.body.removeChild(textarea);if(copied){markCopied();}else{reset();}};if(window.navigator&&navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(copyText).then(function(){markCopied();},function(){fallback();});}else{fallback();}});} }catch(e){/* noop */}})();</script>';
 
         echo '</div>' . str_replace(['class="item"'], ['class="eh-item"'], $traceHtml) . '</div></div>' . $script;
     }
