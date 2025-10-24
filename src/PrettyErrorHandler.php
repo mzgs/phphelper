@@ -300,7 +300,12 @@ class PrettyErrorHandler
     {
         $fileHtml = htmlspecialchars($file, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $lineHtml = (string)(int)$line;
-        $copyText = sprintf('%s: %s', $type, $rawMessage);
+        $copyTextParts = [
+            sprintf('%s: %s', $type, $rawMessage),
+            sprintf('File: %s • Line: %d', $file, $line),
+        ];
+
+        $copyText = implode(PHP_EOL, $copyTextParts);
 
         $copyFrame = $this->resolveCopyFrame($e, $traceSummary, $file, $line);
 
