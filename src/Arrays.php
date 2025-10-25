@@ -277,6 +277,30 @@ class Arrays
     }
 
     /**
+     * Sum values using optional key or callback
+     */
+    public static function sumBy(array $array, string|callable|null $selector = null): float|int
+    {
+        $sum = 0;
+
+        foreach ($array as $index => $item) {
+            if (is_null($selector)) {
+                $value = $item;
+            } elseif (is_callable($selector)) {
+                $value = $selector($item, $index);
+            } else {
+                $value = is_array($item) ? self::get($item, $selector) : null;
+            }
+
+            if (is_numeric($value)) {
+                $sum += $value + 0;
+            }
+        }
+
+        return $sum;
+    }
+
+    /**
      * Sort array by key
      */
     public static function sortBy(array $array, string|callable $key, bool $descending = false): array

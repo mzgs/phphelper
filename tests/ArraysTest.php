@@ -267,6 +267,21 @@ final class ArraysTest extends TestCase
         $this->assertSame([2, 3, 1], array_column($descending, 'id'));
     }
 
+    public function testSumByAggregatesUsingValuesKeysAndCallbacks(): void
+    {
+        $numbers = [1, '2', 3.5, 'not-numeric', null];
+        $this->assertSame(6.5, Arrays::sumBy($numbers));
+
+        $items = [
+            ['price' => 10.5, 'quantity' => 2],
+            ['price' => 5, 'quantity' => 1],
+            ['price' => null, 'quantity' => 3],
+        ];
+
+        $this->assertSame(15.5, Arrays::sumBy($items, 'price'));
+        $this->assertSame(26.0, Arrays::sumBy($items, fn ($item) => ($item['price'] ?? 0) * $item['quantity']));
+    }
+
     public function testAssociativeChecks(): void
     {
         $this->assertTrue(Arrays::isAssoc(['a' => 1, 'b' => 2]));

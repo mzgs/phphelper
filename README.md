@@ -350,6 +350,26 @@ $sortedDesc = Arrays::sortBy($users, 'age', true);
 // Sorted by age descending
 ```
 
+#### `sumBy(array $array, string|callable|null $selector = null): float|int`
+Sum numeric values, optionally using a key (with dot notation) or callback.
+
+```php
+$orders = [
+    ['price' => 12.5, 'quantity' => 2],
+    ['price' => 7, 'quantity' => 1],
+    ['price' => null, 'quantity' => 4],
+];
+
+$totalPrice = Arrays::sumBy($orders, 'price');
+// Result: 19.5
+
+$inventoryValue = Arrays::sumBy($orders, fn($order) => ($order['price'] ?? 0) * $order['quantity']);
+// Result: 32.0
+
+$plainSum = Arrays::sumBy([1, '2', 3.5]);
+// Result: 6.5
+```
+
 #### `random(array $array, int $number = 1): mixed`
 Get random element(s).
 
