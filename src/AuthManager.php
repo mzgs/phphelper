@@ -321,10 +321,11 @@ class AuthManager
         throw new RuntimeException('Authentication required.');
     }
 
-    public static function requireAuthToLogin($loginurl = '/login')
+    public static function redirectIfNotAuthenticated(string $loginUrl = '/login'): void
     {
-        AuthManager::requireAuth(fn() => Http::redirect($loginurl, 302, true));
+        AuthManager::requireAuth(fn() => Http::redirect($loginUrl, 302, true));
     }
+
 
     /**
      * Persist the authenticated user details to session/cookie stores.
