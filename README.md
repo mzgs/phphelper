@@ -2713,6 +2713,20 @@ PrettyErrorHandler::init([
 ]);
 ```
 
+#### `enable(array $options = []): self`
+Enable (or re-enable) the global handler. Any previously active instance is disabled before applying the new settings.
+
+```php
+$handler = PrettyErrorHandler::enable(['show_trace' => false]);
+```
+
+#### `disable(): void`
+Disable the currently active handler and restore the previous PHP error settings.
+
+```php
+PrettyErrorHandler::disable();
+```
+
 #### Available Options:
 - `display` (bool): Force display errors (default: true)
 - `report` (int): Error reporting level (default: E_ALL)

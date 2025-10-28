@@ -7,11 +7,32 @@ class PrettyErrorHandler
     /** @var array<string,mixed> */
     private array $options;
 
+    /** @var bool */
+    private bool $registered = false;
+
+    /** @var bool */
+    private bool $enabled = false;
+
+    /** @var string|false|null */
+    private string|false|null $previousDisplayErrors = null;
+
+    /** @var int|null */
+    private ?int $previousErrorReporting = null;
+
+    /** @var callable|null */
+    private $previousErrorHandler = null;
+
+    /** @var callable|null */
+    private $previousExceptionHandler = null;
+
     /** @var int */
     private static int $overlayCounter = 0;
 
     /** @var bool */
     private static bool $headersDispatched = false;
+
+    /** @var self|null */
+    private static ?self $globalInstance = null;
 
     /**
      * Create and (by default) register global handlers.
@@ -53,17 +74,57 @@ class PrettyErrorHandler
     }
 
     /**
+     * Enable the global pretty error handler. Disables any existing instance first.
+     */
+    public static function enable(array $options = []): self
+    {
+        if (self::$globalInstance instanceof self) {
+            self::$globalInstance->tearDown();
+            self::$globalInstance = null;
+        }
+
+        return self::init($options);
+    }
+
+    /**
+     * Disable the currently active pretty error handler instance, if any.
+     */
+    public static function disable(): void
+    {
+        if (self::$globalInstance instanceof self) {
+            self::$globalInstance->tearDown();
+            self::$globalInstance = null;
+        }
+    }
+
+    /**
      * Register error, exception and shutdown handlers.
      */
     public function register(): void
     {
+        if ($this->registered) {
+            $this->enabled = true;
+            self::$globalInstance = $this;
+            return;
+        }
+
+        $this->previousDisplayErrors = ini_get('display_errors');
+        $this->previousErrorReporting = error_reporting();
+
         // Configure PHP to report and display errors (for development)
         if ($this->options['display']) {
             ini_set('display_errors', '1');
         }
         error_reporting((int)$this->options['report']);
 
-        set_error_handler(function (int $severity, string $message, string $file = 'unknown', int $line = 0): bool {
+        $errorHandler = function (int $severity, string $message, string $file = 'unknown', int $line = 0): bool {
+            if (!$this->enabled) {
+                if (is_callable($this->previousErrorHandler)) {
+                    return (bool)($this->previousErrorHandler)($severity, $message, $file, $line);
+                }
+
+                return false;
+            }
             // Respect @-operator
             if (!(error_reporting() & $severity)) {
                 return false;
@@ -76,9 +137,23 @@ class PrettyErrorHandler
             $this->renderThrowable($this->errorException($message, $severity, $file, $line));
             // Returning true prevents PHP internal handler
             return true;
-        });
+        };
+        $this->previousErrorHandler = set_error_handler($errorHandler);
 
-        set_exception_handler(function ($e): void {
+        $exceptionHandler = function ($e): void {
+            if (!$this->enabled) {
+                if (is_callable($this->previousExceptionHandler)) {
+                    ($this->previousExceptionHandler)($e);
+                    return;
+                }
+
+                if ($e instanceof \Throwable) {
+                    throw $e;
+                }
+
+                throw new \RuntimeException('Unknown exception type thrown');
+            }
+
             if ($e instanceof \Throwable) {
                 $this->renderThrowable($e);
                 // Uncaught exceptions should terminate execution
@@ -87,9 +162,13 @@ class PrettyErrorHandler
             // Fallback for non-Throwable
             $this->renderThrowable(new \RuntimeException('Unknown exception type thrown'));
             exit(255);
-        });
+        };
+        $this->previousExceptionHandler = set_exception_handler($exceptionHandler);
 
         register_shutdown_function(function (): void {
+            if (!$this->enabled) {
+                return;
+            }
             $err = error_get_last();
             if ($err && $this->isFatal($err['type'] ?? 0)) {
                 $e = $this->errorException($err['message'] ?? 'Fatal error', (int)($err['type'] ?? E_ERROR), $err['file'] ?? 'unknown', (int)($err['line'] ?? 0));
@@ -98,6 +177,43 @@ class PrettyErrorHandler
                 exit(255);
             }
         });
+
+        $this->registered = true;
+        $this->enabled = true;
+        self::$globalInstance = $this;
+    }
+
+    private function tearDown(): void
+    {
+        if (!$this->registered) {
+            $this->enabled = false;
+            return;
+        }
+
+        $this->enabled = false;
+
+        // Restore error and exception handlers.
+        restore_error_handler();
+        restore_exception_handler();
+
+        if ($this->previousDisplayErrors === false) {
+            ini_restore('display_errors');
+        } elseif ($this->previousDisplayErrors !== null) {
+            ini_set('display_errors', $this->previousDisplayErrors);
+        }
+
+        if ($this->previousErrorReporting !== null) {
+            error_reporting($this->previousErrorReporting);
+        }
+
+        $this->registered = false;
+        $this->previousErrorHandler = null;
+        $this->previousExceptionHandler = null;
+        $this->previousDisplayErrors = null;
+        $this->previousErrorReporting = null;
+
+        self::$overlayCounter = 0;
+        self::$headersDispatched = false;
     }
 
     private function isCli(): bool
