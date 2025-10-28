@@ -10,6 +10,9 @@ class PrettyErrorHandler
     /** @var int */
     private static int $overlayCounter = 0;
 
+    /** @var bool */
+    private static bool $headersDispatched = false;
+
     /**
      * Create and (by default) register global handlers.
      *
@@ -222,7 +225,18 @@ class PrettyErrorHandler
 
     private function renderHtml(\Throwable $e): void
     {
-        // Intentionally avoid modifying headers so the handler can run after output started.
+        $shouldSendHeaders = !self::$headersDispatched && !headers_sent();
+
+        if (!empty($this->options['overlay'])) {
+            // Overlay is injected into an existing response; avoid touching headers once we've output one instance.
+            $shouldSendHeaders = $shouldSendHeaders && self::$overlayCounter === 0;
+        }
+
+        if ($shouldSendHeaders) {
+            http_response_code(500);
+            header('Content-Type: text/html; charset=UTF-8');
+            self::$headersDispatched = true;
+        }
 
         $type = $e instanceof \ErrorException ? $this->errorLevelToString($e->getSeverity()) : get_class($e);
         [$file, $line] = $this->resolveDisplayFrame($e);
