@@ -222,7 +222,14 @@ class PrettyErrorHandler
 
     private function renderHtml(\Throwable $e): void
     {
-        if (!headers_sent()) {
+        $shouldSendHeaders = !headers_sent();
+
+        if (!empty($this->options['overlay'])) {
+            // Overlay is injected into an existing response; avoid touching headers once we've output one instance.
+            $shouldSendHeaders = $shouldSendHeaders && self::$overlayCounter === 0;
+        }
+
+        if ($shouldSendHeaders) {
             http_response_code(500);
             header('Content-Type: text/html; charset=UTF-8');
         }
