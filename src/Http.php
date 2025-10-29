@@ -52,6 +52,45 @@ class Http
         exit();
     }
 
+    public static function text(string $data, int $status = 200, array $headers = []): void
+    {
+        if (!headers_sent()) {
+            http_response_code($status);
+            header('Content-Type: text/plain; charset=utf-8');
+            foreach ($headers as $k => $v) {
+                header($k . ': ' . $v, true);
+            }
+        }
+        echo $data;
+        exit();
+    }
+
+    static function html(string $data, int $status = 200, array $headers = []): void
+    {
+        if (!headers_sent()) {
+            http_response_code($status);
+            header('Content-Type: text/html; charset=utf-8');
+            foreach ($headers as $k => $v) {
+                header($k . ': ' . $v, true);
+            }
+        }
+        echo $data;
+        exit();
+    }
+
+    static function parseJsonRequest(): mixed
+    {
+        $input = file_get_contents('php://input');
+        if ($input === false || $input === '') {
+            return null;
+        }
+        
+        if (json_validate($input)) {
+            return json_decode($input, true);
+        }  
+        return null;
+    }
+
     /**
      * Collect best-effort client information (IP, UA, browser, OS, device, language, request).
      *
