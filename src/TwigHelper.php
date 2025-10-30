@@ -366,6 +366,7 @@ class TwigHelper
                 },
                 'options' => [],
             ],
+            ['name' => 'get', 'callable' => fn($arg, $default = '') => $_GET[$arg] ?? $default, 'options' => []],
         ];
     }
 
