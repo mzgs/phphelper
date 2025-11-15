@@ -28,6 +28,9 @@ class PrettyErrorHandler
     /** @var int */
     private static int $overlayCounter = 0;
 
+    /** @var list<string> */
+    private static array $deferredOutput = [];
+
     /** @var self|null */
     private static ?self $globalInstance = null;
 
@@ -131,7 +134,9 @@ class PrettyErrorHandler
                 return false;
             }
 
-            $this->renderThrowable($this->errorException($message, $severity, $file, $line));
+            $deferOutput = !$this->isFatal($severity);
+
+            $this->renderThrowable($this->errorException($message, $severity, $file, $line), $deferOutput);
             // Returning true prevents PHP internal handler
             return true;
         };
@@ -164,15 +169,19 @@ class PrettyErrorHandler
 
         register_shutdown_function(function (): void {
             if (!$this->enabled) {
+                self::$deferredOutput = [];
                 return;
             }
             $err = error_get_last();
             if ($err && $this->isFatal($err['type'] ?? 0)) {
+                self::flushDeferredOutput();
                 $e = $this->errorException($err['message'] ?? 'Fatal error', (int)($err['type'] ?? E_ERROR), $err['file'] ?? 'unknown', (int)($err['line'] ?? 0));
                 $this->renderThrowable($e);
                 // Ensure fatal shutdown renders as the last output
                 exit(255);
             }
+
+            self::flushDeferredOutput();
         });
 
         $this->registered = true;
@@ -210,6 +219,7 @@ class PrettyErrorHandler
         $this->previousErrorReporting = null;
 
         self::$overlayCounter = 0;
+        self::$deferredOutput = [];
     }
 
     private function isCli(): bool
@@ -254,7 +264,7 @@ class PrettyErrorHandler
         return new \ErrorException($message, 0, $severity, $file, $line);
     }
 
-    private function renderThrowable(\Throwable $e): void
+    private function renderThrowable(\Throwable $e, bool $deferOutput = false): void
     {
         if (!empty($this->options['log_errors'])) {
             $this->logThrowable($e);
@@ -262,20 +272,35 @@ class PrettyErrorHandler
 
         $displayEnabled = !empty($this->options['display']);
 
+        $bufferOutput = $deferOutput && !$this->isCli();
+
+        if ($bufferOutput) {
+            ob_start();
+        } elseif (!empty(self::$deferredOutput)) {
+            self::flushDeferredOutput();
+        }
+
         if (!$displayEnabled) {
             if ($e instanceof \ErrorException && !$this->isFatal($e->getSeverity())) {
                 // Suppress output for non-fatal errors when display is disabled.
+                if ($bufferOutput) {
+                    ob_end_clean();
+                }
                 return;
             }
 
             $this->renderSilent($e);
-            return;
-        }
-
-        if ($this->isCli()) {
+        } elseif ($this->isCli()) {
             $this->renderCli($e);
         } else {
             $this->renderHtml($e);
+        }
+
+        if ($bufferOutput) {
+            $buffer = ob_get_clean();
+            if ($buffer !== false && $buffer !== '') {
+                self::$deferredOutput[] = $buffer;
+            }
         }
     }
 
@@ -666,5 +691,18 @@ class PrettyErrorHandler
         }
 
         return [$file, $line];
+    }
+
+    private static function flushDeferredOutput(): void
+    {
+        if (!self::$deferredOutput) {
+            return;
+        }
+
+        foreach (self::$deferredOutput as $chunk) {
+            echo $chunk;
+        }
+
+        self::$deferredOutput = [];
     }
 }
