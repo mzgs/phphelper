@@ -272,11 +272,13 @@ class PrettyErrorHandler
 
         $displayEnabled = !empty($this->options['display']);
 
-        $bufferOutput = $deferOutput && !$this->isCli();
+        $wantsHtmlOutput = $this->wantsHtmlOutput();
+
+        $bufferOutput = $deferOutput && $wantsHtmlOutput;
 
         if ($bufferOutput) {
             ob_start();
-        } elseif (!empty(self::$deferredOutput)) {
+        } elseif (!empty(self::$deferredOutput) && $wantsHtmlOutput) {
             self::flushDeferredOutput();
         }
 
@@ -292,6 +294,15 @@ class PrettyErrorHandler
             $this->renderSilent($e);
         } elseif ($this->isCli()) {
             $this->renderCli($e);
+        } elseif (!$wantsHtmlOutput) {
+            if ($e instanceof \ErrorException && !$this->isFatal($e->getSeverity())) {
+                if ($bufferOutput) {
+                    ob_end_clean();
+                }
+                return;
+            }
+
+            $this->renderSilent($e);
         } else {
             $this->renderHtml($e);
         }
@@ -699,10 +710,56 @@ class PrettyErrorHandler
             return;
         }
 
+        if (!self::shouldFlushDeferredOutput()) {
+            self::$deferredOutput = [];
+            return;
+        }
+
         foreach (self::$deferredOutput as $chunk) {
             echo $chunk;
         }
 
         self::$deferredOutput = [];
+    }
+
+    private static function shouldFlushDeferredOutput(): bool
+    {
+        if (!self::$globalInstance instanceof self) {
+            return false;
+        }
+
+        return self::$globalInstance->wantsHtmlOutput();
+    }
+
+    private function wantsHtmlOutput(): bool
+    {
+        if ($this->isCli()) {
+            return false;
+        }
+
+        foreach (headers_list() as $header) {
+            if (stripos($header, 'Content-Type:') === 0) {
+                $value = strtolower(trim(substr($header, strlen('Content-Type:'))));
+                if ($value !== '' && !$this->isHtmlMime($value)) {
+                    return false;
+                }
+
+                if ($this->isHtmlMime($value)) {
+                    return true;
+                }
+            }
+        }
+
+        $accept = strtolower((string)($_SERVER['HTTP_ACCEPT'] ?? ''));
+        if ($accept === '') {
+            return true;
+        }
+
+        return str_contains($accept, 'text/html') || str_contains($accept, 'application/xhtml+xml');
+    }
+
+    private function isHtmlMime(string $value): bool
+    {
+        return str_contains($value, 'text/html') || str_contains($value, 'application/xhtml+xml');
     }
 }
