@@ -28,9 +28,6 @@ class PrettyErrorHandler
     /** @var int */
     private static int $overlayCounter = 0;
 
-    /** @var bool */
-    private static bool $headersDispatched = false;
-
     /** @var self|null */
     private static ?self $globalInstance = null;
 
@@ -213,7 +210,6 @@ class PrettyErrorHandler
         $this->previousErrorReporting = null;
 
         self::$overlayCounter = 0;
-        self::$headersDispatched = false;
     }
 
     private function isCli(): bool
@@ -290,12 +286,6 @@ class PrettyErrorHandler
             return;
         }
 
-        if (!headers_sent()) {
-            http_response_code(500);
-            header('Content-Type: text/plain; charset=UTF-8');
-            self::$headersDispatched = true;
-        }
-
         // Avoid leaking exception details when display is disabled.
         echo 'Internal Server Error';
     }
@@ -370,19 +360,6 @@ class PrettyErrorHandler
 
     private function renderHtml(\Throwable $e): void
     {
-        $shouldSendHeaders = !self::$headersDispatched && !headers_sent();
-
-        if (!empty($this->options['overlay'])) {
-            // Overlay is injected into an existing response; avoid touching headers once we've output one instance.
-            $shouldSendHeaders = $shouldSendHeaders && self::$overlayCounter === 0;
-        }
-
-        if ($shouldSendHeaders) {
-            http_response_code(500);
-            header('Content-Type: text/html; charset=UTF-8');
-            self::$headersDispatched = true;
-        }
-
         $type = $e instanceof \ErrorException ? $this->errorLevelToString($e->getSeverity()) : get_class($e);
         [$file, $line] = $this->resolveDisplayFrame($e);
         $messageRaw = $e->getMessage();
