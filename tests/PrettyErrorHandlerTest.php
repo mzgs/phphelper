@@ -26,4 +26,19 @@ class PrettyErrorHandlerTest extends TestCase
         $this->assertSame($initialDisplay, ini_get('display_errors'));
         $this->assertSame($initialReporting, error_reporting());
     }
+
+    public function testDisplayFalseSuppressesRenderedWarnings(): void
+    {
+        PrettyErrorHandler::enable(['display' => false]);
+
+        try {
+            ob_start();
+            trigger_error('PrettyErrorHandler test warning', E_USER_WARNING);
+            $output = ob_get_clean();
+        } finally {
+            PrettyErrorHandler::disable();
+        }
+
+        $this->assertSame('', $output);
+    }
 }

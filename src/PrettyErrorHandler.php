@@ -264,11 +264,40 @@ class PrettyErrorHandler
             $this->logThrowable($e);
         }
 
+        $displayEnabled = !empty($this->options['display']);
+
+        if (!$displayEnabled) {
+            if ($e instanceof \ErrorException && !$this->isFatal($e->getSeverity())) {
+                // Suppress output for non-fatal errors when display is disabled.
+                return;
+            }
+
+            $this->renderSilent($e);
+            return;
+        }
+
         if ($this->isCli()) {
             $this->renderCli($e);
         } else {
             $this->renderHtml($e);
         }
+    }
+
+    private function renderSilent(\Throwable $e): void
+    {
+        if ($this->isCli()) {
+            fwrite(STDERR, 'An error occurred. Enable PrettyErrorHandler display option for details.' . PHP_EOL);
+            return;
+        }
+
+        if (!headers_sent()) {
+            http_response_code(500);
+            header('Content-Type: text/plain; charset=UTF-8');
+            self::$headersDispatched = true;
+        }
+
+        // Avoid leaking exception details when display is disabled.
+        echo 'Internal Server Error';
     }
 
     private function logThrowable(\Throwable $e): void
