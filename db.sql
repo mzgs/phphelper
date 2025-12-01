@@ -70,6 +70,28 @@ INSERT INTO `logs` VALUES (1,'info','examples.page_rendered','{\"route\": \"exam
 UNLOCK TABLES;
 
 --
+-- Table structure for table `cache_store`
+--
+
+DROP TABLE IF EXISTS `cache_store`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `cache_store` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `cache_key` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `scope` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'general',
+  `payload` longtext COLLATE utf8mb4_unicode_ci,
+  `expires_at` datetime DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `cache_store_cache_key_scope_unique` (`cache_key`,`scope`),
+  KEY `cache_store_expires_idx` (`expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+
+--
 -- Table structure for table `users`
 --
 
