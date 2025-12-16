@@ -512,6 +512,28 @@ class Countries
 
 
 
+    static function alpha2toalpha3(string $code): ?string
+    {
+        static $map = null;
+
+        $code = strtoupper($code);
+        if (strlen($code) !== 2) {
+            return null;
+        }
+
+        if ($map === null) {
+            $map = [];
+            foreach (self::$countries as $isoCode => $details) {
+                if (strlen($isoCode) === 3) {
+                    $map[$details['name']] = $isoCode;
+                }
+            }
+        }
+
+        $country = self::getByCode($code);
+        return $country && isset($map[$country['name']]) ? $map[$country['name']] : null;
+    }
+
     static function getAll(): array
     {
         return self::$countries;
