@@ -277,6 +277,26 @@ class Arrays
     }
 
     /**
+     * Group keys by their values
+     *
+     * @example
+     * $input = ['a' => 'red', 'b' => 'blue', 'c' => 'red'];
+     * $grouped = Arrays::groupByValue($input);
+     * // Results in: ['red' => ['a', 'c'], 'blue' => ['b']]
+     */
+    public static function groupByValue(array $array): array
+    {
+        $results = [];
+
+        foreach ($array as $key => $value) {
+            $groupKey = is_scalar($value) ? (string) $value : json_encode($value);
+            $results[$groupKey][] = $key;
+        }
+
+        return $results;
+    }
+
+    /**
      * Sum values using optional key or callback
      */
     public static function sumBy(array $array, string|callable|null $selector = null): float|int

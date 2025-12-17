@@ -252,6 +252,29 @@ final class ArraysTest extends TestCase
         $this->assertCount(1, $grouped['research']);
     }
 
+    public function testGroupByValueReturnsKeysGroupedByValue(): void
+    {
+        $input = [
+            'first' => 'red',
+            'second' => 'blue',
+            'third' => 'red',
+            'fourth' => null,
+            'pi' => 3.14,
+            'pi-again' => 3.14,
+            'intish' => 2,
+        ];
+
+        $grouped = Arrays::groupByValue($input);
+
+        $this->assertSame([
+            'red' => ['first', 'third'],
+            'blue' => ['second'],
+            'null' => ['fourth'],
+            '3.14' => ['pi', 'pi-again'],
+            '2' => ['intish'],
+        ], $grouped);
+    }
+
     public function testSortBySupportsCallableAndDescendingOrder(): void
     {
         $items = [

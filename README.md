@@ -333,6 +333,19 @@ $grouped = Arrays::groupBy($products, 'category');
 // ]
 ```
 
+#### `groupByValue(array $array): array`
+Group array keys by their values (supports strings, ints, floats, etc.).
+
+```php
+$labels = ['first' => 'red', 'second' => 'blue', 'third' => 'red', 'pi' => 3.14];
+$grouped = Arrays::groupByValue($labels);
+// Result: [
+//   'red' => ['first', 'third'],
+//   'blue' => ['second'],
+//   '3.14' => ['pi']
+// ]
+```
+
 #### `sortBy(array $array, string|callable $key, bool $descending = false): array`
 Sort array by key or callback.
 
