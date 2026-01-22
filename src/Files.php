@@ -2,7 +2,6 @@
 
 namespace PhpHelper;
 
-// sss
 class Files
 {
     /**
@@ -75,6 +74,41 @@ class Files
             mkdir($destDir, 0755, true);
         }
         return rename($source, $dest);
+    }
+
+    /**
+     * Download a file from a URL to a local path
+     */
+    public static function download(string $url, string $savePath): bool
+    {
+        $destDir = dirname($savePath);
+        if (!is_dir($destDir)) {
+            if (!mkdir($destDir, 0755, true) && !is_dir($destDir)) {
+                return false;
+            }
+        }
+
+        $read = fopen($url, 'rb');
+        if ($read === false) {
+            return false;
+        }
+
+        $write = fopen($savePath, 'wb');
+        if ($write === false) {
+            fclose($read);
+            return false;
+        }
+
+        $result = stream_copy_to_stream($read, $write);
+        fclose($read);
+        fclose($write);
+
+        if ($result === false) {
+            @unlink($savePath);
+            return false;
+        }
+
+        return true;
     }
 
     /**

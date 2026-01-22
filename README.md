@@ -1247,6 +1247,16 @@ Move/rename file.
 $success = Files::move('/old/path.txt', '/new/path.txt');
 ```
 
+#### `download(string $url, string $savePath): bool`
+Download a file from a URL to a local path.
+
+```php
+$ok = Files::download('https://example.com/file.zip', '/path/to/file.zip');
+if (!$ok) {
+    echo "Download failed";
+}
+```
+
 #### `delete(string $path): bool`
 Delete file.
 
@@ -2329,6 +2339,15 @@ Move/rename file.
 
 ```php
 Files::move('/old/path/file.txt', '/new/path/file.txt');
+```
+
+#### `download(string $url, string $savePath): bool`
+Download a file from a URL to a local path.
+
+```php
+if (!Files::download('https://example.com/file.zip', '/path/to/file.zip')) {
+    echo "Download failed";
+}
 ```
 
 #### `exists(string $path): bool`
