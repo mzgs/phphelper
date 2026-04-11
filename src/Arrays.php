@@ -270,7 +270,7 @@ class Arrays
                 $groupKey = self::get($item, $key);
             }
 
-            $results[$groupKey][] = $item;
+            $results[$groupKey ?? ''][] = $item;
         }
 
         return $results;

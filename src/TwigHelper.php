@@ -125,13 +125,13 @@ class TwigHelper
             self::$bootstrapped = new \SplObjectStorage();
         }
 
-        if (self::$bootstrapped->contains($env)) {
+        if (self::$bootstrapped->offsetExists($env)) {
             return;
         }
 
         self::registerDefaultFilters($env);
         self::registerDefaultFunctions($env);
-        self::$bootstrapped->attach($env, true);
+        self::$bootstrapped->offsetSet($env, true);
     }
 
     /**
