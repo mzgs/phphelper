@@ -5,29 +5,17 @@ class App
 {
     public static function isLocal(): bool
     {
-        $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? ''));
+        $host = strtolower(
+            (string) ($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '')
+        );
+
         $host = strtok($host, ':') ?: $host;
 
-        if (in_array($host, ['localhost', '127.0.0.1'], true)) {
-            return true;
-        }
-
-        $ips = [
-            $_SERVER['REMOTE_ADDR'] ?? null,
-            $_SERVER['SERVER_ADDR'] ?? null,
-        ];
-
-        foreach ($ips as $ip) {
-            if (!is_string($ip) || $ip === '') {
-                continue;
-            }
-
-            if ($ip === '127.0.0.1' || $ip === '::1') {
-                return true;
-            }
-        }
-
-        return false;
+        return in_array($host, [
+            'localhost',
+            '127.0.0.1',
+            '::1',
+        ], true);
     }
 
     public static function isCli(): bool
